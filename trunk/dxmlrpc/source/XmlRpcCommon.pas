@@ -21,10 +21,16 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcCommon.pas,v 1.2 2004-01-25 18:15:04 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcCommon.pas,v 1.3 2004-04-20 20:35:19 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.2  2004/01/25 18:15:04  iwache
+  New functions FloatToRpcStr and RpcStrToFloat
+  for language independent transmission of real values
+  added. (Problem was: Decimal seperator in German Windows
+  is different to the English one.)
+
   Revision 1.1.1.1  2003/12/03 22:37:48  iwache
   Initial import of release 2.0.0
 
@@ -257,21 +263,22 @@ end;
 {------------------------------------------------------------------------------}
 
 function IsoToDateTime(const ISOStringDate: string): TDateTime;
+var
+  ISOString: string;
 begin
-  Result := EncodeDate(StrToInt(ISOStringDate[1] +
-    ISOStringDate[2] +
-    ISOStringDate[3] +
-    ISOStringDate[4]),
-    StrToInt(ISOStringDate[5] +
-    ISOStringDate[6]),
-    StrToInt(ISOStringDate[7] +
-    ISOStringDate[8])) +
-    EncodeTime(StrToInt(ISOStringDate[10] +
-    ISOStringDate[11]),
-    StrToInt(ISOStringDate[13] +
-    ISOStringDate[14]),
-    StrToInt(ISOStringDate[16] +
-    ISOStringDate[17]), 0);
+  ISOString := ISOStringDate;
+
+  { convert extended format 1993-02-14T13:10:30 into 19930214T131030 }
+  { bug fix to a hint from Sascha Wojewsky }
+  ISOString := StringReplace(ISOString, '-', '', [rfReplaceAll]);
+  ISOString := StringReplace(ISOString, ':', '', [rfReplaceAll]);
+
+  Result := EncodeDate(StrToInt(Copy(ISOString, 1, 4)),
+      StrToInt(Copy(ISOString, 5, 2)),
+      StrToInt(Copy(ISOString, 7, 2)))
+      + EncodeTime(StrToInt(Copy(ISOString, 10, 2)),
+      StrToInt(Copy(ISOString, 12, 2)),
+      StrToInt(Copy(ISOString, 14, 2)), 0);
 end;
 
 const
