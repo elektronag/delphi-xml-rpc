@@ -21,10 +21,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcServer.pas,v 1.1.1.1 2003-12-03 22:37:41 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcServer.pas,v 1.2 2004-04-20 20:34:43 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/12/03 22:37:41  iwache
+  Initial import of release 2.0.0
+
   ----------------------------------------------------------------------------
 }
 unit XmlRpcServer;
@@ -171,8 +174,8 @@ begin
         TRpcStruct(FStack.Peek).LoadRawData(dtString, FName, Data);
       if (FLastTag = 'INT') then
         TRpcStruct(FStack.Peek).LoadRawData(dtInteger, FName, Data);
-      if (FLastTag = 'INT4') then
-        TRpcStruct(FStack.Peek).LoadRawData(dtDateTime, FName, Data);
+      if (FLastTag = 'I4') then
+        TRpcStruct(FStack.Peek).LoadRawData(dtInteger, FName, Data);
       if (FLastTag = 'DOUBLE') then
         TRpcStruct(FStack.Peek).LoadRawData(dtFloat, FName, Data);
       if (FLastTag = 'DATETIME.ISO8601') then
@@ -190,7 +193,7 @@ begin
         TRpcArray(FStack.Peek).LoadRawData(dtString, Data);
       if (FLastTag = 'INT') then
         TRpcArray(FStack.Peek).LoadRawData(dtInteger, Data);
-      if (FLastTag = 'INT4') then
+      if (FLastTag = 'I4') then
         TRpcArray(FStack.Peek).LoadRawData(dtInteger, Data);
       if (FLastTag = 'DOUBLE') then
         TRpcArray(FStack.Peek).LoadRawData(dtFloat, Data);
@@ -210,7 +213,7 @@ begin
         TRpcParameter(FStack.Peek).AsRawString := Data;
       if (FLastTag = 'INT') then
         TRpcParameter(FStack.Peek).AsInteger := StrToInt(Data);
-      if (FLastTag = 'INT4') then
+      if (FLastTag = 'I4') then
         TRpcParameter(FStack.Peek).AsInteger := StrToInt(Data);
       if (FLastTag = 'DOUBLE') then
         TRpcParameter(FStack.Peek).AsFloat := StrToFloat(Data);
@@ -286,6 +289,8 @@ begin
       ptStartTag:
         StartTag;
       ptContent:
+        DataTag;
+      ptCData:
         DataTag;
       ptEndTag:
         EndTag;
