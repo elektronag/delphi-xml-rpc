@@ -21,10 +21,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcClient.pas,v 1.1.1.1 2003-12-03 22:37:51 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcClient.pas,v 1.2 2004-04-20 20:35:51 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/12/03 22:37:51  iwache
+  Initial import of release 2.0.0
+
   ----------------------------------------------------------------------------
 }
 unit XmlRpcClient;
@@ -69,6 +72,9 @@ type
   private
     FHostName: string;
     FHostPort: Integer;
+    FUserName: string;
+    FPassword: string;
+    FBasicAuth: Boolean;
     FProxyName: string;
     FProxyPort: Integer;
     FProxyUserName: string;
@@ -85,6 +91,9 @@ type
     property EndPoint: string read FEndPoint write FEndPoint;
     property HostName: string read FHostName write FHostName;
     property HostPort: Integer read FHostPort write FHostPort;
+    property UserName: string read FUserName write FUserName;
+    property Password: string read FPassword write FPassword;
+    property BasicAuth: Boolean read FBasicAuth write FBasicAuth;
     property ProxyName: string read FProxyName write FProxyName;
     property ProxyPort: Integer read FProxyPort write FProxyPort;
     property ProxyUserName: string read FProxyUserName write FProxyUserName;
@@ -189,6 +198,8 @@ begin
         StartTag;
       ptContent:
         DataTag;
+      ptCData:
+        DataTag;
       ptEndTag:
         EndTag;
     end;
@@ -201,7 +212,7 @@ end;
 
 {$IFDEF INDY9}
 
-function TRpcCaller.Execute(RpcFunction: IRpcFunction; Ttl: Integer): 
+function TRpcCaller.Execute(RpcFunction: IRpcFunction; Ttl: Integer):
     IRpcResult;
 var
   Strings: TStrings;
@@ -333,6 +344,14 @@ begin
         Session.ProxyParams.ProxyPort := FProxyPort;
         Session.ProxyParams.ProxyUserName := FProxyUserName;
         Session.ProxyParams.ProxyPassword := FProxyPassword;
+      end;
+
+      { auth setup  FIX ADD hg}
+      if (FUserName <> '') then
+      begin
+        Session.Request.BasicAuthentication := True;
+        Session.Request.Username := FUserName;
+        Session.Request.Password := FPassword;
       end;
 
       Session.Request.Accept := '*/*';
