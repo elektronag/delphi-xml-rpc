@@ -21,10 +21,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcTypes.pas,v 1.1.1.1 2003-12-03 22:37:46 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcTypes.pas,v 1.2 2004-01-25 18:24:41 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/12/03 22:37:46  iwache
+  Initial import of release 2.0.0
+
   ----------------------------------------------------------------------------
 }
 unit XmlRpcTypes;
@@ -123,6 +126,8 @@ type
     function GetAsBase64Raw: string;
     procedure SetAsBase64Raw(const Value: string);
     function GetDataType: TDataType;
+    function GetAsVariant: Variant;
+    procedure SetAsVariant(Value: Variant);
   protected
     procedure SetAsStruct(Value: IRpcStruct); virtual;
   public
@@ -151,6 +156,7 @@ type
     property AsArray: IRpcArray read GetAsArray write SetAsArray;
     property AsStruct: IRpcStruct read GetAsStruct write SetAsStruct;
     property DataType: TDataType read GetDataType;
+    property AsVariant: Variant read GetAsVariant write SetAsVariant;
   end;
 
   TRpcArrayItem = class(TRpcCustomItem)
@@ -370,6 +376,8 @@ type
 
 implementation
 
+uses Variants;
+
 {
 ******************************** TCustomItem ***********************************
 }
@@ -400,7 +408,26 @@ end;
 
 function TRpcCustomItem.GetAsString: string;
 begin
-  Result := DecodeEntities(AsRawString);
+  case FDataType of
+    dtString:
+      Result := DecodeEntities(AsRawString);
+    dtInteger:
+      Result := IntToStr(AsInteger);
+    dtFloat:
+      Result := FloatToStr(AsFloat);
+    dtBase64:
+      Result := AsBase64Str;
+    dtDateTime:
+      Result := DateTimeToStr(AsDateTime);
+    dtBoolean:
+      Result := BoolToStr(AsBoolean, True);
+//    dtStruct:
+//      Result := '<STRUCT>';
+//    dtArray:
+//      Result := '<ARRAY>';
+  else
+    raise EXmlRpcError.Create('Item type can not be converted into a string')
+  end;
 end;
 
 procedure TRpcCustomItem.SetAsString(const Value: string);
@@ -482,6 +509,47 @@ begin
   Clear;
   FDataType := dtBase64;
   FBase64 := MimeEncodeString{NoCRLF}(Value);
+end;
+
+function TRpcCustomItem.GetAsVariant: Variant;
+begin
+  case FDataType of
+    dtString:
+      Result := DecodeEntities(AsRawString);
+    dtInteger:
+      Result := AsInteger;
+    dtFloat:
+      Result := AsFloat;
+    dtBase64:
+      Result := AsBase64Str;
+    dtDateTime:
+      Result := AsDateTime;
+    dtBoolean:
+      Result := AsBoolean;
+//    dtStruct:
+//      Result := '<STRUCT>';
+//    dtArray:
+//      Result := '<ARRAY>';
+  else
+    raise EXmlRpcError.Create('Item type can not be converted into a variant')
+  end;
+end;
+
+procedure TRpcCustomItem.SetAsVariant(Value: Variant);
+begin
+  if VarIsStr(Value) then
+    AsString := Value
+  else if VarIsType(Value, varBoolean) then
+    AsBoolean := Value
+  else if VarIsOrdinal(Value) then
+    AsInteger := Value
+  else if VarIsFloat(Value) then
+    AsFloat := Value
+  else if VarIsType(Value, varDate) then
+    AsDateTime := Value
+  else
+    raise EXmlRpcError.Create(
+        'Variant type can not be converted into a XML-RPC item');
 end;
 
 function TRpcCustomItem.GetAsArray: IRpcArray;
@@ -612,7 +680,6 @@ function TRpcCustomItem.GetDataType: TDataType;
 begin
   Result := FDataType;
 end;
-
 
 {
 ******************************** TResult ***************************************
@@ -791,11 +858,11 @@ begin
             IntToStr(Items[Index].AsInteger) +
             '</int></value>');
         dtFloat: Strings.Add('      <value><double>' +
-            FloatToStr(Items[Index].AsFloat) +
+            FloatToRpcStr(Items[Index].AsFloat) +
             '</double></value>');
         dtBase64: Strings.Add('      <value><base64>' +
             Items[Index].AsBase64Raw +
-            '      </base64></value>');
+            '</base64></value>');
         dtDateTime: Strings.Add('      <value><dateTime.iso8601>' +
             DateTimeToISO(Items[Index].AsDateTime) +
             '</dateTime.iso8601></value>');
@@ -825,7 +892,7 @@ begin
     dtInteger:
       AddItem(StrToInt(Value));
     dtFloat:
-      AddItem(StrToFloat(Value));
+      AddItem(RpcStrToFloat(Value));
     dtBoolean:
       AddItem(StrToBool(Value));
     dtDateTime:
@@ -1012,8 +1079,8 @@ begin
         dtFloat:
           begin
             Strings.Add('      <name>' + KeyList[I] + '</name>');
-            Strings.Add('      <value><double>' + FloatToStr(Items[I].AsFloat) +
-                '</double></value>');
+            Strings.Add('      <value><double>'
+                + FloatToRpcStr(Items[I].AsFloat) + '</double></value>');
           end;
         dtBase64:
           begin
@@ -1069,7 +1136,7 @@ begin
     dtBoolean:
       AddItem(Key, StrToBool(Value));
     dtFloat:
-      AddItem(Key, StrToFloat(Value));
+      AddItem(Key, RpcStrToFloat(Value));
     dtDateTime:
       AddItemDateTime(Key, IsoToDateTime(Value));
     dtBase64:
@@ -1195,7 +1262,7 @@ begin
           '</string></value>' + #13#10);
       dtFloat:
         Strings.Add('<value><double>' +
-          FloatToStr(Items[I].AsFloat) +
+          FloatToRpcStr(Items[I].AsFloat) +
           '</double></value>' + #13#10);
       dtBoolean:
         if Items[I].AsBoolean then
