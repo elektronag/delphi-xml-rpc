@@ -21,10 +21,24 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcTypes.pas,v 1.2 2004-01-25 18:24:41 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcTypes.pas,v 1.3 2004-04-20 20:33:48 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.2  2004/01/25 18:24:41  iwache
+  New methods GetAsVariant and SetAsVariant and
+  new property AsVariant added to TRpcCustomItem.
+
+  Method TRpcCustomItem.GetAsString extended to
+  convert different data types (Integer, Float, Base64,
+  DateTime and Boolean) into strings.
+
+  Methods TRpcArray.GetAsXML, LoadRawData and
+  TRpcStruct.GetAsXML, LoadRawData and
+  TRpcFunction.GetBodyXML now use FloatToRpcStr
+  resp. RpcStrToFloat for float convertion into
+  XML string and vice versa.
+
   Revision 1.1.1.1  2003/12/03 22:37:46  iwache
   Initial import of release 2.0.0
 
@@ -82,6 +96,10 @@ type
     procedure Base64StrSaveToStream(Stream: TStream);
     procedure Base64StrLoadFromFile(const FileName: string);
     procedure Base64StrSaveToFile(const FileName: string);
+    procedure StrLoadFromStream(Stream: TStream);
+    procedure StrSaveToStream(Stream: TStream);
+    procedure StrLoadFromFile(const FileName: string);
+    procedure StrSaveToFile(const FileName: string);
     property AsRawString: string read GetAsRawString write SetAsRawString;
     property AsString: string read GetAsString write SetAsString;
     property AsInteger: Integer read GetAsInteger write SetAsInteger;
@@ -145,6 +163,10 @@ type
     procedure Base64StrSaveToStream(Stream: TStream); virtual;
     procedure Base64StrLoadFromFile(const FileName: string); virtual;
     procedure Base64StrSaveToFile(const FileName: string); virtual;
+    procedure StrLoadFromStream(Stream: TStream); virtual;
+    procedure StrSaveToStream(Stream: TStream); virtual;
+    procedure StrLoadFromFile(const FileName: string); virtual;
+    procedure StrSaveToFile(const FileName: string); virtual;
     property AsRawString: string read GetAsRawString write SetAsRawString;
     property AsString: string read GetAsString write SetAsString;
     property AsInteger: Integer read GetAsInteger write SetAsInteger;
@@ -676,6 +698,40 @@ begin
   end;
 end;
 
+procedure TRpcCustomItem.StrLoadFromStream(Stream: TStream);
+begin
+  AsString := StreamToString(Stream);
+end;
+
+procedure TRpcCustomItem.StrSaveToStream(Stream: TStream);
+begin
+  StringToStream(AsString, Stream);
+end;
+
+procedure TRpcCustomItem.StrLoadFromFile(const FileName: string);
+var
+  Stream: TStream;
+begin
+  Stream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+  try
+    StrLoadFromStream(Stream);
+  finally
+    Stream.Free;
+  end;
+end;
+
+procedure TRpcCustomItem.StrSaveToFile(const FileName: string);
+var
+  Stream: TStream;
+begin
+  Stream := TFileStream.Create(FileName, fmCreate);
+  try
+    StrSaveToStream(Stream);
+  finally
+    Stream.Free;
+  end;
+end;
+
 function TRpcCustomItem.GetDataType: TDataType;
 begin
   Result := FDataType;
@@ -789,7 +845,9 @@ end;
 
 procedure TRpcCustomArray.AddItemBase64Str(const Value: string);
 begin
-  InternalAddItem.AsBase64Str := MimeEncodeStringNoCRLF(Value);
+  // Bug with double MimeEncodeString fixed
+  // Thanks to Nicolas Seyer - nolics
+  InternalAddItem.AsBase64Str := Value;
 end;
 
 procedure TRpcCustomArray.AddItemBase64StrFromFile(const FileName: string);
@@ -1178,11 +1236,11 @@ var
 begin
   Strings := TStringList.Create;
   try
-    Strings.Add('<?xml version="1.0"?>' + #13#10);
-    Strings.Add('<methodCall>' + #13#10);
-    Strings.Add('   <methodName>' + FObjectMethod + '</methodName>' + #13#10);
+    Strings.Add('<?xml version="1.0"?>');
+    Strings.Add('<methodCall>');
+    Strings.Add('   <methodName>' + FObjectMethod + '</methodName>');
     GetBodyXML(Strings);
-    Strings.Add('</methodCall>' + #13#10);
+    Strings.Add('</methodCall>');
     Result := Strings.Text;
   finally
     Strings.Free;
@@ -1202,10 +1260,10 @@ begin
 
   Strings := TStringList.Create;
   try
-    Strings.Add('<?xml version="1.0"?>' + #13#10);
-    Strings.Add('<methodResponse>' + #13#10);
+    Strings.Add('<?xml version="1.0"?>');
+    Strings.Add('<methodResponse>');
     GetBodyXML(Strings);
-    Strings.Add('</methodResponse>' + #13#10);
+    Strings.Add('</methodResponse>');
     Result := Strings.Text;
   finally
     Strings.Free;
@@ -1218,25 +1276,25 @@ var
 begin
   Strings := TStringList.Create;
   try
-    Strings.Add('<?xml version="1.0"?>' + #13#10);
-    Strings.Add('<methodResponse>' + #13#10);
-    Strings.Add('   <fault>' + #13#10);
-    Strings.Add('      <value>' + #13#10);
-    Strings.Add('        <struct>' + #13#10);
-    Strings.Add('            <member>' + #13#10);
-    Strings.Add('               <name>faultCode</name>' + #13#10);
+    Strings.Add('<?xml version="1.0"?>');
+    Strings.Add('<methodResponse>');
+    Strings.Add('   <fault>');
+    Strings.Add('      <value>');
+    Strings.Add('        <struct>');
+    Strings.Add('            <member>');
+    Strings.Add('               <name>faultCode</name>');
     Strings.Add('               <value><int>' + IntToStr(FErrorCode)
-        + '</int></value>' + #13#10);
-    Strings.Add('               </member>' + #13#10);
-    Strings.Add('            <member>' + #13#10);
-    Strings.Add('               <name>faultString</name>' + #13#10);
+        + '</int></value>');
+    Strings.Add('               </member>');
+    Strings.Add('            <member>');
+    Strings.Add('               <name>faultString</name>');
     Strings.Add('               <value><string>' + FErrorMsg
-        + '</string></value>' + #13#10);
-    Strings.Add('               </member>' + #13#10);
-    Strings.Add('            </struct>' + #13#10);
-    Strings.Add('         </value>' + #13#10);
-    Strings.Add('      </fault>' + #13#10);
-    Strings.Add('   </methodResponse>' + #13#10);
+        + '</string></value>');
+    Strings.Add('               </member>');
+    Strings.Add('            </struct>');
+    Strings.Add('         </value>');
+    Strings.Add('      </fault>');
+    Strings.Add('   </methodResponse>');
     Result := Strings.Text;
   finally
     Strings.Free;
@@ -1247,43 +1305,43 @@ procedure TRpcFunction.GetBodyXML(Strings: TStrings);
 var
   I: Integer;
 begin
-  Strings.Add('   <params>' + #13#10);
+  Strings.Add('   <params>');
   for I := 0 to Count - 1 do
   begin
-    Strings.Add('   <param>' + #13#10);
+    Strings.Add('   <param>');
     case Items[I].DataType of
       dtInteger:
         Strings.Add('<value><int>' +
           IntToStr(Items[I].AsInteger) +
-          '</int></value>' + #13#10);
+          '</int></value>');
       dtString:
         Strings.Add('<value><string>' +
           Items[I].AsRawString +
-          '</string></value>' + #13#10);
+          '</string></value>');
       dtFloat:
         Strings.Add('<value><double>' +
           FloatToRpcStr(Items[I].AsFloat) +
-          '</double></value>' + #13#10);
+          '</double></value>');
       dtBoolean:
         if Items[I].AsBoolean then
-          Strings.Add('<value><boolean>1</boolean></value>' + #13#10)
+          Strings.Add('<value><boolean>1</boolean></value>')
         else
-          Strings.Add('<value><boolean>0</boolean></value>' + #13#10);
+          Strings.Add('<value><boolean>0</boolean></value>');
       dtDateTime:
         Strings.Add('<value><dateTime.iso8601>' +
           DateTimeToISO(Items[I].AsDateTime) +
-          '</dateTime.iso8601></value>' + #13#10);
+          '</dateTime.iso8601></value>');
       dtArray:
-        Strings.Add(Items[I].AsArray.GetAsXML + #13#10);
+        Strings.Add(Items[I].AsArray.GetAsXML);
       dtStruct:
-        Strings.Add(Items[I].AsStruct.GetAsXML + #13#10);
+        Strings.Add(Items[I].AsStruct.GetAsXML);
       dtBase64:
         Strings.Add('<value><base64>' + Items[I].AsBase64Raw
-            + '</base64></value>' + #13#10);
+            + '</base64></value>');
     end;
-    Strings.Add('   </param>' + #13#10);
+    Strings.Add('   </param>');
   end;
-  Strings.Add('   </params>' + #13#10);
+  Strings.Add('   </params>');
 end;
 
 end.
