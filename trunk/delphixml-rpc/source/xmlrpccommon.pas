@@ -20,10 +20,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpccommon.pas,v 1.1.1.1 2003-11-19 22:11:51 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpccommon.pas,v 1.2 2003-11-20 21:30:15 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/11/19 22:11:51  iwache
+  Initial import
+
   ----------------------------------------------------------------------------
 }
 unit xmlrpccommon;
@@ -511,10 +514,11 @@ begin
   result := StringReplace(result,'<string></null></string>','<string>[NULL]</string>',[rfReplaceAll,rfIgnoreCase]);
   result := StringReplace(result,'<string> </string>','<string>[NULL]</string>',[rfReplaceAll,rfIgnoreCase]);
 
-  result := StringReplace(result,'<value></value>','<string>[NULL]</string>',[rfReplaceAll,rfIgnoreCase]);
-  result := StringReplace(result,'<value></nil></value>','<string>[NULL]</string>',[rfReplaceAll,rfIgnoreCase]);
-  result := StringReplace(result,'<value></null></value>','<string>[NULL]</string>',[rfReplaceAll,rfIgnoreCase]);
-  result := StringReplace(result,'<value> </value>','<string>[NULL]</string>',[rfReplaceAll,rfIgnoreCase]);
+  //CLINTON 16/9/2003 - <string></string> was not compatable with XML-RPC spec.
+  result := StringReplace(result,'<value></value>','<value>[NULL]</value>',[rfReplaceAll,rfIgnoreCase]);
+  result := StringReplace(result,'<value></nil></value>','<value>[NULL]</value>',[rfReplaceAll,rfIgnoreCase]);
+  result := StringReplace(result,'<value></null></value>','<value>[NULL]</value>',[rfReplaceAll,rfIgnoreCase]);
+  result := StringReplace(result,'<value> </value>','<value>[NULL]</value>',[rfReplaceAll,rfIgnoreCase]);
 end;
 {$IFDEF ACTIVEX}
 function StreamToVariant( aStream: TStream): OleVariant;

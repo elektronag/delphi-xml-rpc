@@ -20,10 +20,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpctypes.pas,v 1.1.1.1 2003-11-19 22:12:23 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpctypes.pas,v 1.2 2003-11-20 21:30:14 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/11/19 22:12:23  iwache
+  Initial import
+
   ----------------------------------------------------------------------------
 }
 unit xmlrpctypes;
@@ -372,7 +375,7 @@ begin
   tf := TFileStream.Create(filename,fmOpenRead);
   ti.FBase64 :=  MimeEncodeStringNoCRLF(StreamToString(tf));
   FItemList.AddObject(key,ti);
-  tf.Free;
+  FreeAndNil(tf);
 end;
 
 {------------------------------------------------------------------------------}
@@ -860,7 +863,7 @@ begin
            begin
              st.Add('      <name>' +
                    FItemList[index]  +
-                   '      </name>');
+                   '</name>');  //Otherwise adds space to name - LEE 1/10/2003
              st.Add(TStructItem(FItemList.Objects[index]).FStruct.GetAsXML);
            end;
         dtArray:
@@ -875,8 +878,9 @@ begin
 		end;
     st.Add('  </struct>');
     st.Add('</value>');
-    result := st.GetText;
-    st.Free;
+    // result := st.GetText; // GetText producece MemLeak. 14.8.2003 / mko
+    result := st.Text;
+    FreeAndNil(st);
 end;
 
 {------------------------------------------------------------------------------}
@@ -899,8 +903,8 @@ end;
 
 {------------------------------------------------------------------------------}
 function TStruct.IsStruct(index: integer): boolean;
-begin
-  if TStructItem(FItemList[index]).FType = dtStruct then
+begin                     //Check object not string - LEE 1/10/2003
+  if TStructItem(FItemList.objects[index]).FType = dtStruct then
     result := true
   else
     result := false;
@@ -936,7 +940,7 @@ begin
     begin
      TStructItem(FItemList.Objects[index]).Free;
     end;
-    FItemList.Free;
+    FreeAndNil(FItemList);
 
 end;
 
@@ -1083,7 +1087,7 @@ begin
   tf := TFileStream.Create(filename,fmOpenRead);
   ti.FBase64 :=  MimeEncodeStringNoCRLF(StreamToString(tf));
   FList.Add(ti);
-  tf.Free;
+  FreeAndNil(tf);
 end;
 
 {------------------------------------------------------------------------------}
@@ -1133,7 +1137,7 @@ end;
 
 destructor TArray.Destroy;
 begin
-  FList.Free;
+  FreeAndNil(FList);
   inherited;
 end;
 
@@ -1189,8 +1193,9 @@ begin
      st.Add('  </data>');
      st.Add('</array>');
      st.Add('</value>');
-    result := st.GetText;
-    st.Free;
+     // result := st.GetText; // GetText producece MemLeak. 14.8.2003 / mko
+    result := st.Text;
+    FreeAndNil(st);
 end;
 
 {------------------------------------------------------------------------------}
@@ -1490,7 +1495,7 @@ begin
   tf := TFileStream.Create(filename,fmOpenRead);
   ti.FBase64 :=  MimeEncodeStringNoCRLF(StreamToString(tf));
   FList.Add(ti);
-  tf.Free;
+  FreeAndNil(tf);
 end;
 
 {------------------------------------------------------------------------------}
@@ -1579,7 +1584,7 @@ end;
 destructor TFunction.Destroy;
 begin
   Clear;
-  FList.Free;
+  FreeAndNil(FList);
   inherited;
 end;
 
@@ -1596,7 +1601,7 @@ begin
   fi.FBase64 := MimeEncodeStringNoCRLF(st);
   fi.FType := dtBase64;
   FList.Add(fi);
-  r4.Free;
+  FreeAndNil(r4);
 end;
 
 {------------------------------------------------------------------------------}
@@ -1650,6 +1655,8 @@ begin
       FType := dtError;
       self.FErrorCode := value.GetInteger('faultCode');
       self.FErrorString := DecodeEntities(value.GetString('faultString'));
+      FreeAndNil(Value); // In case of  a faultcode the struct is no longer used.
+                         // mko / 31.08.2003
      exit;
     end;
   FType := dtStruct;
@@ -1880,7 +1887,7 @@ begin
       mstream := TMemoryStream.Create;
       StringToStream(MimeDecodeString(FBase64),mstream);
       mstream.SaveToFile(filename);
-      mstream.Free;
+      FreeAndNil(mstream);
     end
   else
     raise Exception.Create('TResult.PutBase64ToFile - Item is not a base64 type');
@@ -1891,9 +1898,9 @@ destructor TResult.Destroy;
 begin
 
   if assigned(FArray) then
-    FArray.Free;
+    FreeAndNil(FArray);
   if assigned(FStruct) then
-    FStruct.Free;
+    FreeAndNil(FStruct);
   FBase64 := '';
   FString := '';
 
@@ -1913,6 +1920,11 @@ end;
 {------------------------------------------------------------------------------}
 destructor TFunctionItem.Destroy;
 begin
+  // Free also FArray und FStruct. 14.8.2003 / mko
+  if assigned(FArray) then
+    FreeAndNil(FArray);
+  if assigned(FStruct) then
+    FreeAndNil(FStruct);
   FBase64 := '';
   FString := '';
   inherited;
@@ -1923,9 +1935,9 @@ destructor TArrayItem.Destroy;
 begin
   inherited;
   if assigned(FArray) then
-    FArray.Free;
+    FreeAndNil(FArray);
   if assigned(FStruct) then
-    FStruct.Free;
+    FreeAndNil(FStruct);
     FBase64 := '';
     FString := '';
 end;
@@ -1935,9 +1947,9 @@ destructor TStructItem.Destroy;
 begin
   inherited;
   if assigned(FArray) then
-    FArray.Free;
+    FreeAndNil(FArray);
   if assigned(FStruct) then
-    FStruct.Free;
+    FreeAndNil(FStruct);
   FBase64 := '';
   FString := '';
 end;
@@ -2079,7 +2091,7 @@ begin
     tf := TFileStream.Create(FileName,fmOpenRead);
     TArrayItem(FList[index]).FType := dtBase64;
     TArrayItem(FList[index]).FBase64 := MimeEncodeStringNoCRLF(StreamToString(tf));
-    tf.Free;
+    FreeAndNil(tf);
   except
     raise exception.Create('TArray.SetBase64File error during insertion');
   end;
@@ -2224,7 +2236,7 @@ begin
     tf := TFileStream.Create(FileName,fmOpenRead);
     TStructItem(FItemList.Objects[i]).FType := dtBase64;
     TStructItem(FItemList.Objects[i]).FBase64 := MimeEncodeStringNoCRLF(StreamToString(tf));
-    tf.Free;
+    FreeAndNil(tf);
   except
     raise Exception.Create('TStruct.SetBase64File insertion failed')
   end;

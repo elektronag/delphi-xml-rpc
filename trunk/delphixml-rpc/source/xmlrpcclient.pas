@@ -20,10 +20,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpcclient.pas,v 1.1.1.1 2003-11-19 22:12:11 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpcclient.pas,v 1.2 2003-11-20 21:30:15 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/11/19 22:12:11  iwache
+  Initial import
+
   ----------------------------------------------------------------------------
 }
 unit xmlrpcclient;
@@ -48,10 +51,14 @@ type
   TClientParser = class(TObject)
   private
     FStack: TObjectStack;
-    FName: string;
+    //FName: string;
+    fStructNames : TStringList ;
     FResult: TResult;
     FParser: TXMLParser;
     FLastTag: string;
+
+    procedure pushStructName (const name : String) ;
+    function popStructName() : String ;
   public
     constructor Create;
     destructor Destroy; override;
@@ -115,6 +122,22 @@ implementation
 {------------------------------------------------------------------------------}
 { RPC PARSER CONSTRUCTOR                                                       }
 {------------------------------------------------------------------------------}
+//CLINTON 16/9/2003 - push/pop StructName used to store prior struct member name
+procedure TClientParser.pushStructName (const name : String) ;
+begin
+  fStructNames.add (name) ;
+end ;
+
+function TClientParser.popStructName() : String ;
+
+var idx : integer ;
+
+begin
+  idx := fStructNames.count - 1 ;
+  result := fStructNames[idx] ;
+  fStructNames.delete (idx) ;
+end ;
+
 constructor TClientParser.Create;
 begin
   inherited;
@@ -128,6 +151,9 @@ begin
   begin
     FStack.Free;
   end;
+  //CLINTON - 16/9/2003
+  if assigned (fStructNames) then fStructNames.free() ;
+
   if Assigned(FParser) then
     FParser.Free;
 
@@ -152,6 +178,8 @@ begin
     FParser := TXMLParser.Create;
   if not Assigned(FStack) then
     FStack := TObjectStack.Create;
+  if not Assigned (FStructNames) then  //CLINTON - 16/9/2003
+    fStructNames := TStringList.create() ;
   if not Assigned(FResult) then
     FResult := TResult.Create;
 
@@ -308,8 +336,6 @@ begin
      Parse(rs);
      value.Clear;
      result := GetResult;
-
-
 end;
 
 {------------------------------------------------------------------------------}
@@ -322,6 +348,8 @@ var
  FSession : TIdHttp;
  SSLIOHandler: TIdSSLIOHandlerSocket;
 begin
+  try  // If connection fails, free recources!
+       // mko, 31.08.2003
   rsp := TMemoryStream.Create;
   snd := TMemoryStream.Create;
   StringToStream(rdata,snd); { convert to a stream }
@@ -364,13 +392,16 @@ begin
     FSession.Post('https://' + FHostName + ':' + IntToStr(FHostPort) + FEndPoint,snd,rsp);
 
   result := StreamToString(rsp);
-  FSession.Free;
+//    FSession.Free;   // mko, 31.08.2003
 
+
+  finally   // mko, 31.08.2003
   if Assigned(SSLIOHandler) then
     SSLIOHandler.Free;
-
+    FSession.Free;
   rsp.Free;
   snd.Free;
+end;
 end;
 
 
@@ -417,27 +448,28 @@ begin
    just store it for the next pass    }
   if (FLastTag = 'NAME')then
     begin
-      FName := dat;
+      //FName := dat;               //CLINTON 16/9/2003
+      pushStructName (dat) ;
       exit;
     end;
 
   if (FStack.Count > 0) then
     if (TObject(FStack.Peek) is TStruct) then
-      begin
+      begin                                //CLINTON 16/9/2003
         if (FLastTag = 'STRING') then
-          TStruct(FStack.Peek).LoadRawData(dtString,FName,dat);
+          TStruct(FStack.Peek).LoadRawData(dtString,{FName}popStructName(),dat);
         if (FLastTag = 'INT') then
-          TStruct(FStack.Peek).LoadRawData(dtInteger,FName,dat);
+          TStruct(FStack.Peek).LoadRawData(dtInteger,{FName}popStructName(),dat);
         if (FLastTag = 'I4') then
-          TStruct(FStack.Peek).LoadRawData(dtInteger,FName,dat);
+          TStruct(FStack.Peek).LoadRawData(dtInteger,{FName}popStructName(),dat);
         if (FLastTag = 'DOUBLE') then
-          TStruct(FStack.Peek).LoadRawData(dtDouble,FName,dat);
+          TStruct(FStack.Peek).LoadRawData(dtDouble,{FName}popStructName(),dat);
         if (FLastTag = 'DATETIME.ISO8601') then
-          TStruct(FStack.Peek).LoadRawData(dtDate,FName,dat);
+          TStruct(FStack.Peek).LoadRawData(dtDate,{FName}popStructName(),dat);
         if (FLastTag = 'BASE64') then
-          TStruct(FStack.Peek).LoadRawData(dtBase64,FName,dat);
+          TStruct(FStack.Peek).LoadRawData(dtBase64,{FName}popStructName(),dat);
         if (FLastTag = 'BOOLEAN') then
-          TStruct(FStack.Peek).LoadRawData(dtBoolean,FName,dat);
+          TStruct(FStack.Peek).LoadRawData(dtBoolean,{FName}popStructName(),dat);
 
       end;
 
@@ -510,7 +542,7 @@ begin
               if (TObject(FStack.Peek) is TArray) then
                 TArray(FStack.Peek).AddItem(st);
               if (TObject(FStack.Peek) is TStruct) then
-                TStruct(FStack.Peek).AddItem(FName,st)
+                TStruct(FStack.Peek).AddItem({FName}popStructName(),st)
             end
            else
              FResult.AddItem(st);
@@ -527,7 +559,7 @@ begin
                if (TObject(FStack.Peek) is TArray) then
                  TArray(FStack.Peek).AddItem(sa);
                if (TObject(FStack.Peek) is TStruct) then
-                 TStruct(FStack.Peek).AddItem(FName,sa);
+                 TStruct(FStack.Peek).AddItem({FName}popStructName(),sa);
              end
            else
              FResult.AddItem(sa);
@@ -544,7 +576,7 @@ begin
           if(FStack.Count > 0) then
             begin
               if(TObject(FStack.Peek) is TStruct) then
-                TStruct(FStack.Peek).AddItem(FName,sa);
+                TStruct(FStack.Peek).AddItem({FName}popStructName(),sa);
               if(TObject(FStack.Peek) is TArray) then
                 TArray(FStack.Peek).AddItem(sa);
             end
@@ -565,6 +597,9 @@ begin
        FResult.AddItem(TArray(FStack.Pop));
      {free the stack}
      FStack.Free;
+     FStack := nil ;
+     fStructNames.free() ;  //CLINTON 16/9/2003
+     fStructNames := nil ;
    end;
 end;
 

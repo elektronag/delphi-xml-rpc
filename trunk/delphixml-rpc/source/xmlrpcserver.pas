@@ -20,10 +20,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpcserver.pas,v 1.1.1.1 2003-11-19 22:11:48 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpcserver.pas,v 1.2 2003-11-20 21:30:15 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/11/19 22:11:48  iwache
+  Initial import
+
   ----------------------------------------------------------------------------
 }
 unit xmlrpcserver;
@@ -77,7 +80,8 @@ type
   private
     FServer : TIdHttpServer;
     FPort: integer;
-    FMethodList: TList;
+    FMethodList: TobjectList;  // TList.Create; Take TObjectList instead of TList;
+                               // a free to TObjectList frees also its items.  14.8.2003 / mko
     FSParser: TServerParser;
     FActive: boolean;
     FLock : TCriticalSection;
@@ -326,7 +330,8 @@ constructor TServer.Create;
 begin
   FServer := TIdHTTPServer.Create(nil);
   FSParser := TServerParser.Create;
-  FMethodList := TList.Create;
+  FMethodList := TObjectList.Create; // TList.Create; Take TObjectList instead of TList; 14.8.2003 / mko
+  FMethodList.OwnsObjects := true;
   FLock := TCriticalSection.Create;
 
 end;

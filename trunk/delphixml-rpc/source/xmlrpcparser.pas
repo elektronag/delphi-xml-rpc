@@ -1,8 +1,11 @@
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpcparser.pas,v 1.1.1.1 2003-11-19 22:12:09 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/delphixml-rpc/source/xmlrpcparser.pas,v 1.2 2003-11-20 21:30:15 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/11/19 22:12:09  iwache
+  Initial import
+
   ----------------------------------------------------------------------------
 }
 (**
@@ -195,10 +198,11 @@ Date        Author Version Changes
                    (*$DEFINE K1_OR_NEWER *)
                  (*$ENDIF *)
                  (*$IFNDEF VER140 *)
-                   If the compiler gets stuck here,
-                   you are using a compiler version unknown to this code.
-                   You will probably have to change this code accordingly.
-                   At first, try to comment out these lines and see what will happen.
+                   //CLINTON 16/9/2003 - Im running delphi 7 compiles fine apart from these lines.
+                   //If the compiler gets stuck here,
+                   //you are using a compiler version unknown to this code.
+                   //You will probably have to change this code accordingly.
+                   //At first, try to comment out these lines and see what will happen.
                  (*$ENDIF *)
                (*$ENDIF *)
              (*$ENDIF *)
