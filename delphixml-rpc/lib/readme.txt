@@ -1,1 +1,0 @@
-This folder is for the dcu library files build by xmlrpc\build\BuildAll.bpg.

@@ -1,1 +1,0 @@
-This folder is for the binary files build by xmlrpc\build\BuildAll.bpg.
