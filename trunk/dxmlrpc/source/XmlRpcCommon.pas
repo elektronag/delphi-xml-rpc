@@ -21,10 +21,13 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcCommon.pas,v 1.1.1.1 2003-12-03 22:37:48 iwache Exp $
+  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcCommon.pas,v 1.2 2004-01-25 18:15:04 iwache Exp $
   ----------------------------------------------------------------------------
 
   $Log: not supported by cvs2svn $
+  Revision 1.1.1.1  2003/12/03 22:37:48  iwache
+  Initial import of release 2.0.0
+
   ----------------------------------------------------------------------------
 }
 unit XmlRpcCommon;
@@ -94,6 +97,10 @@ function Mid(const Data: string; Start: Integer): string;
 function DateTimeToISO(ConvertDate: TDateTime): string;
 
 function IsoToDateTime(const ISOStringDate: string): TDateTime;
+
+function FloatToRpcStr(Value: Double): string;
+
+function RpcStrToFloat(Value: string): Double;
 
 function ParseString(const SearchString: string; Delimiter: Char;
   Substrings: TStrings; const AllowEmptyStrings: Boolean = False;
@@ -208,7 +215,7 @@ end;
 {------------------------------------------------------------------------------}
 
 function ParseStream(SearchStream: TStream; Delimiter: Char; Substrings: 
-    TStrings; AllowEmptyStrings: Boolean = False; ClearBeforeParse: Boolean = 
+    TStrings; AllowEmptyStrings: Boolean = False; ClearBeforeParse: Boolean =
     False): Integer;
 begin
   Result := ParseString(StreamToString(SearchStream), Delimiter, Substrings,
@@ -265,6 +272,39 @@ begin
     ISOStringDate[14]),
     StrToInt(ISOStringDate[16] +
     ISOStringDate[17]), 0);
+end;
+
+const
+  RpcDecimalSeparator = '.';
+
+function SubstDecSep(DblValue: string; RemDecSep, AddDecSep: Char): string;
+var
+  DecPos: Integer;
+begin
+  Result := DblValue;
+  DecPos := Pos(RemDecSep, Result);
+  if DecPos > 0 then
+    Result[DecPos] := AddDecSep;
+end;
+
+{------------------------------------------------------------------------------}
+{  Converts a float value into a XML-RPC string                                }
+{------------------------------------------------------------------------------}
+
+function FloatToRpcStr(Value: Double): string;
+begin
+  Result := SubstDecSep(FloatToStr(Value), DecimalSeparator,
+      RpcDecimalSeparator);
+end;
+
+{------------------------------------------------------------------------------}
+{  Converts a XML-RPC string into a float value                                }
+{------------------------------------------------------------------------------}
+
+function RpcStrToFloat(Value: string): Double;
+begin
+  Result := StrToFloat(SubstDecSep(Value, RpcDecimalSeparator,
+      DecimalSeparator));
 end;
 
 {------------------------------------------------------------------------------}
