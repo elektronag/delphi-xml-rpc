@@ -21,10 +21,17 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcClient.pas,v 1.2 2004-04-20 20:35:51 iwache Exp $
+  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcClient.pas,v 1.2 2004/04/20 20:35:51 iwache Exp $
   ----------------------------------------------------------------------------
 
-  $Log: not supported by cvs2svn $
+  $Log: XmlRpcClient.pas,v $
+  Revision 1.2  2004/04/20 20:35:51  iwache
+  - New properties UserName, Password and BasicAuth
+  added to TRpcCaller.
+  - Bug in procedure TRpcClientParser.Parse fixed,
+  CDATA sections for strings added.
+  Thanks for both to Henrik Genssen - hinnack
+
   Revision 1.1.1.1  2003/12/03 22:37:51  iwache
   Initial import of release 2.0.0
 
@@ -32,9 +39,9 @@
 }
 unit XmlRpcClient;
 
-{$DEFINE INDY9}
-
 interface
+
+{$INCLUDE 'indy.inc'}
 
 uses
   SysUtils, Classes, Contnrs, XmlRpcTypes, XmlRpcCommon,
@@ -311,7 +318,12 @@ var
   SendStream: TStream;
   ResponseStream: TStream;
   Session: TIdHttp;
+{$IFDEF INDY9}
   IdSSLIOHandlerSocket: TIdSSLIOHandlerSocket;
+{$ENDIF}
+{$IFDEF INDY10}
+  IdSSLIOHandlerSocket : TIdSSLIOHandlerSocketOpenSSL;
+{$ENDIF}
 begin
   SendStream := nil;
   ResponseStream := nil;
@@ -326,7 +338,12 @@ begin
       IdSSLIOHandlerSocket := nil;
       if (FSSLEnable) then
       begin
+        {$IFDEF INDY9}
         IdSSLIOHandlerSocket := TIdSSLIOHandlerSocket.Create(nil);
+        {$ENDIF}
+        {$IFDEF INDY10}
+        IdSSLIOHandlerSocket := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+        {$ENDIF}
         IdSSLIOHandlerSocket.SSLOptions.RootCertFile := FSSLRootCertFile;
         IdSSLIOHandlerSocket.SSLOptions.CertFile := FSSLCertFile;
         IdSSLIOHandlerSocket.SSLOptions.KeyFile := FSSLKeyFile;
