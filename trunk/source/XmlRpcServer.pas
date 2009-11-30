@@ -100,7 +100,9 @@ type
     { end introspection extension methods }
     procedure DataPosted(Thread: TRpcThread; RequestInfo: TIdHTTPRequestInfo;
       ResponseInfo: TIdHTTPResponseInfo);
-    procedure SetActive(const Value: Boolean);
+    procedure DataPostedUnknownMethod(AContext: TIdContext;
+      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); virtual;
+    procedure SetActive(const Value: boolean);
     procedure StartServer;
     procedure StopServer;
     function GetParser: TRpcServerParser;
@@ -111,6 +113,34 @@ type
     procedure RegisterMethodHandler(MethodHandler: TRpcMethodHandler);
     property ListenPort: Integer read FPort write FPort;
     property Active: Boolean read FActive write SetActive;
+  end;
+
+type
+  TOnWebCommand = procedure(ASender: TObject; ACommand: string;
+    AParams: TStrings; var AResult: boolean) of object;
+
+type
+  TRpcWebServer = class(TRpcServer)
+  private
+    FCommands:     TStringList;
+    FRootFolder:   string;
+    FOnWebCommand: TOnWebCommand;
+  protected
+    procedure SetRootFolder(AValue: string);
+    function GetRootFolder: string;
+    procedure DataPostedUnknownMethod(AContext: TIdContext;
+      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); override;
+    function ExecuteWebCommand(ACommand : String; AParams : TStrings) : Boolean;      
+  public
+    constructor Create; reintroduce;
+    destructor Destroy; override;
+    function AddCommand(ACommand: string): boolean;
+    function RemoveCommand(ACommand: string): boolean;
+    function RemoveAllCommands: boolean;
+    procedure AddMimeType(const Ext, MIMEType: string);
+  published
+    property RootFolder: string Read GetRootFolder Write SetRootFolder;
+    property OnWebCommand: TOnWebCommand Read FOnWebCommand Write FOnWebCommand;
   end;
 
 implementation
@@ -342,13 +372,30 @@ end;
 
 {------------------------------------------------------------------------------}
 
-procedure TRpcServer.DataPosted(Thread: TRpcThread; RequestInfo:
-  TIdHTTPRequestInfo; ResponseInfo: TIdHTTPResponseInfo);
+procedure TRpcServer.DataPostedUnknownMethod(AContext: TIdContext;
+  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
-  Index: Integer;
   RpcReturn: TRpcReturn;
-  Found: Boolean;
-  List: TList;
+begin
+  RpcReturn := TRpcReturn.Create;
+  try
+    RpcReturn.SetError(999,
+      'Requested method was not registered on the server');
+    AResponseInfo.ContentType    := 'text/xml';
+    AResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
+    AResponseInfo.ContentText    := RpcReturn.ResponseXML;
+  finally
+    RpcReturn.Free;
+  end;
+end;
+
+procedure TRpcServer.DataPosted(Thread: TRpcThread; RequestInfo: TIdHTTPRequestInfo;
+  ResponseInfo: TIdHTTPResponseInfo);
+var
+  Index:     integer;
+  RpcReturn: TRpcReturn;
+  Found:     boolean;
+  List:      TList;
   RequestName: string;
   Parser: TRpcServerParser;
 begin
@@ -405,19 +452,13 @@ begin
           Found := True;
         end;
 
-      if not Found then
+      if Found then
       begin
-        RpcReturn.SetError(999,
-          'Requested method was not registered on the server');
-        ResponseInfo.ContentType := 'text/xml';
+        ResponseInfo.ContentType    := 'text/xml';
         ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-        ResponseInfo.ContentText := RpcReturn.ResponseXML;
-        Exit;
+        ResponseInfo.ContentText    := RpcReturn.ResponseXML;
+      end
       end;
-
-      ResponseInfo.ContentType := 'text/xml';
-      ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-      ResponseInfo.ContentText := RpcReturn.ResponseXML;
     except
       on E: Exception do
       begin
@@ -565,6 +606,119 @@ begin
       Signatures.AddItem(TRpcMethodHandler(FMethodList[Index]).Signature);
   RpcArray.AddItem(Signatures);
   Return.AddItem(RpcArray);
+end;
+
+
+// TRpcWebServer
+
+procedure TRpcWebServer.SetRootFolder(AValue : String);
+begin
+  FRootFolder := IncludeTrailingPathDelimiter(AValue);
+end;
+
+function TRpcWebServer.GetRootFolder : String;
+begin
+  Result := FRootFolder;
+end;
+
+procedure TRpcWebServer.DataPostedUnknownMethod(AContext: TIdContext;
+      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
+var
+  Document : String;
+  Command : String;
+begin
+  try
+  Document := ARequestInfo.Document;
+  if (Document = '/') then
+    begin
+      if FileExists(FRootFolder + 'index.html') then Document := 'index.html' else
+      if FileExists(FRootFolder + 'index.htm') then Document := 'index.htm' else
+      Document := '';
+    end;
+  if FCommands.IndexOf(Document) <> -1 then
+    begin
+      Document := '';
+      if ExecuteWebCommand(Document,ARequestInfo.Params) then
+        begin
+          AResponseInfo.ResponseNo :=  204;
+          AResponseInfo.ContentText := 'OK';
+        end else
+        begin
+          AResponseInfo.ResponseNo :=  400;
+          AResponseInfo.ContentText := 'FAILED';
+        end;
+    end;
+  Document := StringReplace(Document,'/','\',[rfReplaceAll]);
+  Document := FRootFolder + Document;
+  Document := StringReplace(Document,'\\','\',[rfReplaceAll]);
+  if FileExists(Document) then
+    begin
+      AResponseInfo.ContentType := FServer.MIMETable.GetFileMIMEType(Document);
+      AResponseInfo.ContentStream := TFileStream.Create(Document,fmOpenRead + fmShareDenyWrite);
+    end else
+    begin
+      AResponseInfo.ResponseNo :=  404;
+      AResponseInfo.ContentText := 'File not found: ' + ARequestInfo.Document;
+    end;
+  finally
+  end;
+end;
+
+constructor TRpcWebServer.Create;
+begin
+  inherited Create;
+  FCommands := TStringList.Create;
+  AddMimeType('.exe','application/octet-stream');
+end;
+
+destructor TRpcWebServer.Destroy;
+begin
+  FreeAndNil(FCommands);
+  inherited Destroy;
+end;
+
+function TRpcWebServer.AddCommand(ACommand: string): boolean;
+begin
+  Result := False;
+  if FCommands.IndexOf('/' + ACommand) = -1 then
+    begin
+      FCommands.Add('/' + ACommand);
+      Result := True;
+    end;
+end;
+
+function TRpcWebServer.RemoveCommand(ACommand: string): boolean;
+var
+  CommandIdx : Integer;
+begin
+  Result := False;
+  CommandIdx := FCommands.IndexOf('/' + ACommand);
+  if CommandIdx <> -1 then
+    begin
+      FCommands.Delete(CommandIdx);
+      Result := True;
+    end;
+end;
+
+function TRpcWebServer.RemoveAllCommands: boolean;
+begin
+  FCommands.Clear;
+  Result := True;
+end;
+
+function TRpcWebServer.ExecuteWebCommand(ACommand : String; AParams : TStrings) : Boolean;
+begin
+  Result := False;
+  if Assigned(FOnWebCommand) then
+    begin
+      Result := True;
+      FOnWebCommand(Self,ACommand,AParams,Result);
+    end;
+end;
+
+procedure TRpcWebServer.AddMimeType(const Ext, MIMEType: string);
+begin
+  HTTPServer.MIMETable.AddMimeType(Ext,MIMEType);
 end;
 
 end.
