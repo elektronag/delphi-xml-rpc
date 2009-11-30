@@ -21,10 +21,19 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcServer.pas,v 1.2 2004-04-20 20:34:43 iwache Exp $
+  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcServer.pas,v 1.2 2004/04/20 20:34:43 iwache Exp $
   ----------------------------------------------------------------------------
 
-  $Log: not supported by cvs2svn $
+  $Log: XmlRpcServer.pas,v $
+  Revision 1.2  2004/04/20 20:34:43  iwache
+  Bug in procedure TRpcServerParser.DataTag fixed,
+  FLastTag = 'INT4' must be FLastTag = 'I4'.
+  Thanks to s.xmlrpc at --ringo.co.za--
+
+  Bug in procedure TRpcServerParser.Parse fixed,
+  CDATA sections for strings added.
+  Thanks to Henrik Genssen - hinnack
+
   Revision 1.1.1.1  2003/12/03 22:37:41  iwache
   Initial import of release 2.0.0
 
@@ -34,6 +43,8 @@ unit XmlRpcServer;
 
 interface
 
+{$INCLUDE 'indy.inc'}
+
 uses
   SysUtils, Classes, Contnrs, SyncObjs,
   // #iwa-2003-11-09: IdCustomHTTPServer added for D7 support
@@ -42,10 +53,18 @@ uses
   IdTCPServer,
   XmlRpcCommon,
   LibXmlParser,
+  {$IFDEF INDY10}
+  IdContext,
+  {$ENDIF}
   XmlRpcTypes;
 
 type
+{$IFDEF INDY9}
   TRpcThread = TIdPeerThread;
+{$ENDIF}
+{$IFDEF INDY10}
+  TRpcThread = TIdContext;
+{$ENDIF}
 
   { method handler procedure type }
   TRPCMethod = procedure(Thread: TRpcThread; const MethodName: string;
@@ -103,6 +122,7 @@ type
     procedure SetActive(const Value: Boolean);
     procedure StartServer;
     procedure StopServer;
+  protected
     function GetParser: TRpcServerParser;
   public
     constructor Create;

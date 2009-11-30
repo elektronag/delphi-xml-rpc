@@ -21,10 +21,25 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcTypes.pas,v 1.3 2004-04-20 20:33:48 iwache Exp $
+  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcTypes.pas,v 1.3 2004/04/20 20:33:48 iwache Exp $
   ----------------------------------------------------------------------------
 
-  $Log: not supported by cvs2svn $
+  $Log: XmlRpcTypes.pas,v $
+  Revision 1.3  2004/04/20 20:33:48  iwache
+  New procedures StrLoadFromStream, StrSaveToStream,
+  StrLoadFromFile and StrSaveToFile to IRpcCustomItem
+  and TRpcCustomItem added. Thanks to
+  Henrik Genssen - hinnack
+
+  Bug with double MimeEncodeString fixed in
+  TRpcCustomArray.AddItemBase64Str.
+  Thanks to Nicolas Seyer - nolics
+
+  Bug of additional #13#10 appended lines  fixed in
+  TRpcFunction.GetRequestXML, TRpcFunction.GetResponseXML,
+  TRpcFunction.GetErrorXML and TRpcFunction.GetBodyXML.
+  Thanks to Nicolas again
+
   Revision 1.2  2004/01/25 18:24:41  iwache
   New methods GetAsVariant and SetAsVariant and
   new property AsVariant added to TRpcCustomItem.
