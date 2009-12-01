@@ -101,6 +101,9 @@ type
   TRpcServer = class(TObject)
   private
     FServer: TIdHttpServer;
+  protected
+    property Server : TIdHttpServer read FServer;
+  private
     FPort: Integer;
     // Take TObjectList instead of TList;
     // A free to TObjectList frees also its items.  14.8.2003 / mko
@@ -119,7 +122,11 @@ type
     { end introspection extension methods }
     procedure DataPosted(Thread: TRpcThread; RequestInfo: TIdHTTPRequestInfo;
       ResponseInfo: TIdHTTPResponseInfo);
-    procedure SetActive(const Value: Boolean);
+  protected
+    procedure DataPostedUnknownMethod(AContext: TIdContext;
+      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); virtual;
+  private
+    procedure SetActive(const Value: boolean);
     procedure StartServer;
     procedure StopServer;
   protected
@@ -362,13 +369,30 @@ end;
 
 {------------------------------------------------------------------------------}
 
-procedure TRpcServer.DataPosted(Thread: TRpcThread; RequestInfo:
-  TIdHTTPRequestInfo; ResponseInfo: TIdHTTPResponseInfo);
+procedure TRpcServer.DataPostedUnknownMethod(AContext: TIdContext;
+  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
-  Index: Integer;
   RpcReturn: TRpcReturn;
-  Found: Boolean;
-  List: TList;
+begin
+  RpcReturn := TRpcReturn.Create;
+  try
+    RpcReturn.SetError(999,
+      'Requested method was not registered on the server');
+    AResponseInfo.ContentType    := 'text/xml';
+    AResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
+    AResponseInfo.ContentText    := RpcReturn.ResponseXML;
+  finally
+    RpcReturn.Free;
+  end;
+end;
+
+procedure TRpcServer.DataPosted(Thread: TRpcThread; RequestInfo: TIdHTTPRequestInfo;
+  ResponseInfo: TIdHTTPResponseInfo);
+var
+  Index:     integer;
+  RpcReturn: TRpcReturn;
+  Found:     boolean;
+  List:      TList;
   RequestName: string;
   Parser: TRpcServerParser;
 begin
@@ -425,19 +449,12 @@ begin
           Found := True;
         end;
 
-      if not Found then
+      if Found then
       begin
-        RpcReturn.SetError(999,
-          'Requested method was not registered on the server');
-        ResponseInfo.ContentType := 'text/xml';
+        ResponseInfo.ContentType    := 'text/xml';
         ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-        ResponseInfo.ContentText := RpcReturn.ResponseXML;
-        Exit;
+        ResponseInfo.ContentText    := RpcReturn.ResponseXML;
       end;
-
-      ResponseInfo.ContentType := 'text/xml';
-      ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-      ResponseInfo.ContentText := RpcReturn.ResponseXML;
     except
       on E: Exception do
       begin
