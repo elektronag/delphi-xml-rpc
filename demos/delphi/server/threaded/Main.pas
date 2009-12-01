@@ -60,6 +60,10 @@ var
   Form1: TForm1;
 
 implementation
+{$ifdef INDY10}
+uses
+  idsync;
+{$endif}
 
 {$R *.DFM}
 
@@ -135,7 +139,12 @@ begin
   FCriticalSection.Enter;
   try
     FMessage := IntToStr(GetCurrentThreadId) + ' ' + Msg;
+    {$ifdef INDY9}
     Thread.Synchronize(AddMessage);
+    {$endif}
+    {$ifdef INDY10}
+    Tidsync.SynchronizeMethod(AddMessage);
+    {$endif}
   finally
     FCriticalSection.Leave;
   end;

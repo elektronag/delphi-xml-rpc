@@ -39,7 +39,7 @@ object Form1: TForm1
     Width = 65
     Height = 21
     TabOrder = 2
-    Text = '8.080'
+    Text = '8080'
     OnChange = ebPortChange
   end
   object udPort: TUpDown
