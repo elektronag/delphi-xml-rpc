@@ -127,6 +127,10 @@ const
     'Invalid payload received from xml-rpc server';
 
 implementation
+uses
+{$IFDEF WIN32}
+  Windows;
+{$ENDIF}
 
 {------------------------------------------------------------------------------}
 { RPC PARSER CONSTRUCTOR                                                       }
@@ -303,9 +307,9 @@ begin
     repeat
       if (SearchRec.Attr and faDirectory = 0) then
         if FileIsExpired(GetTempDir + SearchRec.Name, Ttl) then
-          DeleteFile(GetTempDir + SearchRec.Name);
+          SysUtils.DeleteFile(GetTempDir + SearchRec.Name);
     until FindNext(SearchRec) <> 0;
-    FindClose(SearchRec);
+    SysUtils.FindClose(SearchRec);
   end;
 end;
 
