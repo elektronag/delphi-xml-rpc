@@ -64,7 +64,6 @@ procedure TRpcWebServer.DataPostedUnknownMethod(AContext: TIdContext;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
   Document : String;
-  Command : String;
 begin
   try
   Document := ARequestInfo.Document;
