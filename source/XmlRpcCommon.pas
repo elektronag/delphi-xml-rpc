@@ -44,8 +44,7 @@
 }
 unit XmlRpcCommon;
 
-{$DEFINE INDY9}
-{$DEFINE ACTIVEX}
+{$INCLUDE 'indy.inc'}
 
 interface
 
