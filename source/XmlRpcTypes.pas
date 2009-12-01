@@ -986,7 +986,13 @@ begin
 end;
 
 destructor TRpcStruct.Destroy;
+var
+  Index : Integer;
 begin
+  for Index := FKeyList.Count - 1 downto 0 do
+    FKeyList.Objects[Index].Free;
+  FKeyList.Clear;
+
   FKeyList.Free;
   inherited Destroy;
 end;
