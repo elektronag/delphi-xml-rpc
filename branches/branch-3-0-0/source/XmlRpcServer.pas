@@ -21,10 +21,19 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcServer.pas,v 1.2 2004-04-20 20:34:43 iwache Exp $
+  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcServer.pas,v 1.2 2004/04/20 20:34:43 iwache Exp $
   ----------------------------------------------------------------------------
 
-  $Log: not supported by cvs2svn $
+  $Log: XmlRpcServer.pas,v $
+  Revision 1.2  2004/04/20 20:34:43  iwache
+  Bug in procedure TRpcServerParser.DataTag fixed,
+  FLastTag = 'INT4' must be FLastTag = 'I4'.
+  Thanks to s.xmlrpc at --ringo.co.za--
+
+  Bug in procedure TRpcServerParser.Parse fixed,
+  CDATA sections for strings added.
+  Thanks to Henrik Genssen - hinnack
+
   Revision 1.1.1.1  2003/12/03 22:37:41  iwache
   Initial import of release 2.0.0
 
@@ -34,6 +43,8 @@ unit XmlRpcServer;
 
 interface
 
+{$INCLUDE 'indy.inc'}
+
 uses
   SysUtils, Classes, Contnrs, SyncObjs,
   // #iwa-2003-11-09: IdCustomHTTPServer added for D7 support
@@ -42,10 +53,18 @@ uses
   IdTCPServer,
   XmlRpcCommon,
   LibXmlParser,
+  {$IFDEF INDY10}
+  IdContext,
+  {$ENDIF}
   XmlRpcTypes;
 
 type
+{$IFDEF INDY9}
   TRpcThread = TIdPeerThread;
+{$ENDIF}
+{$IFDEF INDY10}
+  TRpcThread = TIdContext;
+{$ENDIF}
 
   { method handler procedure type }
   TRPCMethod = procedure(Thread: TRpcThread; const MethodName: string;
@@ -82,6 +101,9 @@ type
   TRpcServer = class(TObject)
   private
     FServer: TIdHttpServer;
+  protected
+    property Server : TIdHttpServer read FServer;
+  private
     FPort: Integer;
     // Take TObjectList instead of TList;
     // A free to TObjectList frees also its items.  14.8.2003 / mko
@@ -90,19 +112,23 @@ type
     FActive: Boolean;
     FLock: TCriticalSection;
     FIntrospect: Boolean;
+  public // DrN 2010
     {introspection extension methods }
-    procedure SystemListMethods(Thread: TRpcThread; const MethodName: string;
-        List: TList; Return: TRpcReturn);
-    procedure SystemMethodHelp(Thread: TRpcThread; const MethodName: string;
-        List: TList; Return: TRpcReturn);
-    procedure SystemMethodSignature(Thread: TRpcThread;
-        const MethodName: string; List: TList; Return: TRpcReturn);
+    procedure SystemListMethods(Thread: TRpcThread; const MethodName: string; List: TList; Return: TRpcReturn);
+    procedure SystemMethodHelp(Thread: TRpcThread; const MethodName: string; List: TList; Return: TRpcReturn);
+    procedure SystemMethodSignature(Thread: TRpcThread; const MethodName: string; List: TList; Return: TRpcReturn);
     { end introspection extension methods }
+  private // DrN 2010
     procedure DataPosted(Thread: TRpcThread; RequestInfo: TIdHTTPRequestInfo;
       ResponseInfo: TIdHTTPResponseInfo);
-    procedure SetActive(const Value: Boolean);
+  protected
+    procedure DataPostedUnknownMethod(AContext: TIdContext;
+      ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); virtual;
+  private
+    procedure SetActive(const Value: boolean);
     procedure StartServer;
     procedure StopServer;
+  protected
     function GetParser: TRpcServerParser;
   public
     constructor Create;
@@ -342,13 +368,30 @@ end;
 
 {------------------------------------------------------------------------------}
 
-procedure TRpcServer.DataPosted(Thread: TRpcThread; RequestInfo:
-  TIdHTTPRequestInfo; ResponseInfo: TIdHTTPResponseInfo);
+procedure TRpcServer.DataPostedUnknownMethod(AContext: TIdContext;
+  ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
-  Index: Integer;
   RpcReturn: TRpcReturn;
-  Found: Boolean;
-  List: TList;
+begin
+  RpcReturn := TRpcReturn.Create;
+  try
+    RpcReturn.SetError(999,
+      'Requested method was not registered on the server');
+    AResponseInfo.ContentType    := 'text/xml';
+    AResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
+    AResponseInfo.ContentText    := RpcReturn.ResponseXML;
+  finally
+    RpcReturn.Free;
+  end;
+end;
+
+procedure TRpcServer.DataPosted(Thread: TRpcThread; RequestInfo: TIdHTTPRequestInfo;
+  ResponseInfo: TIdHTTPResponseInfo);
+var
+  Index:     integer;
+  RpcReturn: TRpcReturn;
+  Found:     boolean;
+  List:      TList;
   RequestName: string;
   Parser: TRpcServerParser;
 begin
@@ -397,7 +440,8 @@ begin
       end;
 
       for Index := 0 to FMethodList.Count - 1 do
-        if (TRpcMethodHandler(FMethodList[Index]).Name = RequestName) then
+        //  FIX!DrN CaseInsensitive Enabled
+        if SameText(TRpcMethodHandler(FMethodList[Index]).Name, RequestName) then
         begin
           TRpcMethodHandler(FMethodList[Index]).Method(Thread,
               TRpcMethodHandler(FMethodList[Index]).Name, List, RpcReturn);
@@ -405,19 +449,12 @@ begin
           Found := True;
         end;
 
-      if not Found then
+      if Found then
       begin
-        RpcReturn.SetError(999,
-          'Requested method was not registered on the server');
-        ResponseInfo.ContentType := 'text/xml';
+        ResponseInfo.ContentType    := 'text/xml';
         ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-        ResponseInfo.ContentText := RpcReturn.ResponseXML;
-        Exit;
+        ResponseInfo.ContentText    := RpcReturn.ResponseXML;
       end;
-
-      ResponseInfo.ContentType := 'text/xml';
-      ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-      ResponseInfo.ContentText := RpcReturn.ResponseXML;
     except
       on E: Exception do
       begin

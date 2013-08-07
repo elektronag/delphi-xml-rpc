@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <PersonalityInfo>
+    <Option>
+      <Option Name="Personality">Default.Personality</Option>
+      <Option Name="ProjectType"></Option>
+      <Option Name="Version">1.0</Option>
+      <Option Name="GUID">{37071A12-FF9D-457B-AE6D-206981AC272A}</Option>
+    </Option>
+  </PersonalityInfo>
+  <Default.Personality>
+    
+    
+    
+    
+    
+    <Projects>
+      <Projects Name="thelloclient.exe">thelloclient.bdsproj</Projects>
+      <Projects Name="thelloserver.exe">..\..\server\threaded\thelloserver.bdsproj</Projects>
+      <Projects Name="Targets">thelloclient.exe thelloserver.exe</Projects>
+    </Projects>
+    <Dependencies/>
+  </Default.Personality>
+</BorlandProject>

@@ -76,7 +76,7 @@ begin
 {$IFDEF LOCAL}
     RpcCaller.EndPoint := '/xml-rpc/server.php';
     RpcCaller.HostName := 'localhost';
-    RpcCaller.HostPort := 8080;
+    RpcCaller.HostPort := 8081;
 {$ELSE}
     RpcCaller.EndPoint := '/xml-rpc/server.php';
     RpcCaller.HostName := 'www.dwp42.org';
@@ -84,15 +84,18 @@ begin
 {$ENDIF}
 
     RpcFunction := TRpcFunction.Create;
-    RpcFunction.ObjectMethod := 'interopEchoTests.echoString';
-    RpcFunction.AddItem('Hello, world!');
+//    RpcFunction.ObjectMethod := 'interopEchoTests.echoString';
+    RpcFunction.ObjectMethod := 'system.listMethods';
+//    RpcFunction.AddItem('Hello, world!');
 
     RpcResult := RpcCaller.Execute(RpcFunction);
     if RpcResult.IsError then
       ShowMessageFmt('Error: (%d) %s', [RpcResult.ErrorCode,
           RpcResult.ErrorMsg])
     else
-      ShowMessage('Success: ' + RpcResult.AsString);
+//      ShowMessage('Success: ' + RpcResult.AsString);
+      ShowMessage('Success: ' + (RpcResult.AsArray).GetAsXML);
+
   finally
     RpcCaller.Free;
   end;
