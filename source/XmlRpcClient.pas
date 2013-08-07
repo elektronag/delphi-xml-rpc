@@ -21,10 +21,17 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcClient.pas,v 1.2 2004-04-20 20:35:51 iwache Exp $
+  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcClient.pas,v 1.2 2004/04/20 20:35:51 iwache Exp $
   ----------------------------------------------------------------------------
 
-  $Log: not supported by cvs2svn $
+  $Log: XmlRpcClient.pas,v $
+  Revision 1.2  2004/04/20 20:35:51  iwache
+  - New properties UserName, Password and BasicAuth
+  added to TRpcCaller.
+  - Bug in procedure TRpcClientParser.Parse fixed,
+  CDATA sections for strings added.
+  Thanks for both to Henrik Genssen - hinnack
+
   Revision 1.1.1.1  2003/12/03 22:37:51  iwache
   Initial import of release 2.0.0
 
@@ -32,9 +39,9 @@
 }
 unit XmlRpcClient;
 
-{$DEFINE INDY9}
-
 interface
+
+{$INCLUDE 'indy.inc'}
 
 uses
   SysUtils, Classes, Contnrs, XmlRpcTypes, XmlRpcCommon,
@@ -44,6 +51,7 @@ uses
   IdHashMessageDigest,
   IdHash,
 {$ENDIF}
+  IdComponent,
   LibXmlParser;
 
 type
@@ -64,8 +72,7 @@ type
     procedure StartTag;
     procedure EndTag;
     procedure DataTag;
-    property FixEmptyStrings: Boolean read FFixEmptyStrings
-        write FFixEmptyStrings;
+    property FixEmptyStrings: Boolean read FFixEmptyStrings write FFixEmptyStrings;
   end;
 
   TRpcCaller = class(TRpcClientParser)
@@ -85,6 +92,14 @@ type
     FSSLKeyFile: string;
     FEndPoint: string;
     FProxyBasicAuth: Boolean;
+    // DrN 2010.12.27 Begin
+    FOnWork: TWorkEvent;
+    FOnWorkBegin: TWorkBeginEvent;
+    FOnWorkEnd: TWorkEndEvent;
+    procedure DoWork(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Integer);
+    procedure DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode; AWorkCountMax: Integer);
+    procedure DoWorkEnd(ASender: TObject; AWorkMode: TWorkMode);
+    // DrN 2010.12.27 End
     function Post(const RawData: string): string;
   public
     constructor Create;
@@ -100,10 +115,14 @@ type
     property ProxyPassword: string read FProxyPassword write FProxyPassword;
     property ProxyBasicAuth: Boolean read FProxyBasicAuth write FProxyBasicAuth;
     property SSLEnable: Boolean read FSSLEnable write FSSLEnable;
-    property SSLRootCertFile: string read FSSLRootCertFile write
-      FSSLRootCertFile;
+    property SSLRootCertFile: string read FSSLRootCertFile write FSSLRootCertFile;
     property SSLCertFile: string read FSSLCertFile write FSSLCertFile;
     property SSLKeyFile: string read FSSLKeyFile write FSSLKeyFile;
+    // DrN 2010.12.27 Begin
+    property OnWork: TWorkEvent read FOnWork write FOnWork;
+    property OnWorkBegin: TWorkBeginEvent read FOnWorkBegin write FOnWorkBegin;
+    property OnWorkEnd: TWorkEndEvent read FOnWorkEnd write FOnWorkEnd;
+    // DrN 2010.12.27 End
 {$IFDEF INDY9}
     function Execute(RpcFunction: IRpcFunction; Ttl: Integer): IRpcResult; overload;
 {$ENDIF}
@@ -116,10 +135,13 @@ const
   ERROR_EMPTY_RESULT = 600;
   ERROR_EMPTY_RESULT_MESSAGE = 'The xml-rpc server returned a empty response';
   ERROR_INVALID_RESPONSE = 601;
-  ERROR_INVALID_RESPONSE_MESSAGE =
-    'Invalid payload received from xml-rpc server';
+  ERROR_INVALID_RESPONSE_MESSAGE = 'Invalid payload received from xml-rpc server';
 
 implementation
+uses
+{$IFDEF WIN32}
+  Windows;
+{$ENDIF}
 
 {------------------------------------------------------------------------------}
 { RPC PARSER CONSTRUCTOR                                                       }
@@ -296,11 +318,34 @@ begin
     repeat
       if (SearchRec.Attr and faDirectory = 0) then
         if FileIsExpired(GetTempDir + SearchRec.Name, Ttl) then
-          DeleteFile(GetTempDir + SearchRec.Name);
+          SysUtils.DeleteFile(GetTempDir + SearchRec.Name);
     until FindNext(SearchRec) <> 0;
-    FindClose(SearchRec);
+    SysUtils.FindClose(SearchRec);
   end;
 end;
+
+{ DrN 2010.12.27 Begin}
+
+procedure TRpcCaller.DoWork(ASender: TObject; AWorkMode: TWorkMode;
+  AWorkCount: Integer);
+begin
+  if Assigned(OnWork) then
+    OnWork(Self, AWorkMode, AWorkCount);
+end;
+
+procedure TRpcCaller.DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
+  AWorkCountMax: Integer);
+begin
+  if Assigned(OnWorkBegin) then
+    OnWorkBegin(Self, AWorkMode, AWorkCountMax);
+end;
+
+procedure TRpcCaller.DoWorkEnd(ASender: TObject; AWorkMode: TWorkMode);
+begin
+  if Assigned(OnWorkEnd) then
+    OnWorkEnd(Self, AWorkMode);
+end;
+{ DrN 2010.12.27 End}
 
 {------------------------------------------------------------------------------}
 { POST THE REQUEST TO THE RPC SERVER                                           }
@@ -311,7 +356,12 @@ var
   SendStream: TStream;
   ResponseStream: TStream;
   Session: TIdHttp;
+{$IFDEF INDY9}
   IdSSLIOHandlerSocket: TIdSSLIOHandlerSocket;
+{$ENDIF}
+{$IFDEF INDY10}
+  IdSSLIOHandlerSocket : TIdSSLIOHandlerSocketOpenSSL;
+{$ENDIF}
 begin
   SendStream := nil;
   ResponseStream := nil;
@@ -322,11 +372,21 @@ begin
     StringToStream(RawData, SendStream); { convert to a stream }
     SendStream.Position := 0;
     Session := TIdHttp.Create(nil);
+    // DrN 2010.12.27 Begin
+    Session.OnWork := DoWork;
+    Session.OnWorkBegin := DoWorkBegin;
+    Session.OnWorkEnd := DoWorkEnd;
+    // DrN 2010.12.27 End
     try
       IdSSLIOHandlerSocket := nil;
       if (FSSLEnable) then
       begin
+        {$IFDEF INDY9}
         IdSSLIOHandlerSocket := TIdSSLIOHandlerSocket.Create(nil);
+        {$ENDIF}
+        {$IFDEF INDY10}
+        IdSSLIOHandlerSocket := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+        {$ENDIF}
         IdSSLIOHandlerSocket.SSLOptions.RootCertFile := FSSLRootCertFile;
         IdSSLIOHandlerSocket.SSLOptions.CertFile := FSSLCertFile;
         IdSSLIOHandlerSocket.SSLOptions.KeyFile := FSSLKeyFile;

@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <Transactions>
+    <Transaction>2010.03.12 19:22:47.419.bdsgroup,D:\Delphi\Default\ProjectGroup1.bdsgroup=D:\Delphi\Works\svpvd\trunk\libs\delphixml-rpc\demos\delphi\client\threaded\ProjectGroupThreadSystem.bdsgroup</Transaction>
+    <Transaction>2010.03.12 19:23:02.342.bdsgroup,D:\Delphi\Works\svpvd\trunk\libs\delphixml-rpc\demos\delphi\client\threaded\ProjectGroupThreadSystem.bdsgroup=D:\Delphi\Works\svpvd\trunk\libs\delphixml-rpc\demos\delphi\client\threaded\ThreadSystem.bdsgroup</Transaction>
+    <Transaction>2010.03.12 19:23:11.156.bdsgroup,D:\Delphi\Works\svpvd\trunk\libs\delphixml-rpc\demos\delphi\client\threaded\ThreadSystem.bdsgroup=D:\Delphi\Works\svpvd\trunk\libs\delphixml-rpc\demos\delphi\client\threaded\ThreadApps.bdsgroup</Transaction>
+  </Transactions>
+  <Default.Personality>
+    <Projects ActiveProject="thelloserver.exe"/>
+  </Default.Personality>
+</BorlandProject>

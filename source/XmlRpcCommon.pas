@@ -21,10 +21,16 @@
 {                                                       }
 {*******************************************************}
 {
-  $Header: d:\Archive\DeltaCopy\Backup\delphixml-rpc.cvs.sourceforge.net/dxmlrpc/source/XmlRpcCommon.pas,v 1.3 2004-04-20 20:35:19 iwache Exp $
+  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcCommon.pas,v 1.3 2004/04/20 20:35:19 iwache Exp $
   ----------------------------------------------------------------------------
 
-  $Log: not supported by cvs2svn $
+  $Log: XmlRpcCommon.pas,v $
+  Revision 1.3  2004/04/20 20:35:19  iwache
+  Function IsoToDateTime now handles both valid
+  ISO 8601 - Date/Time Representations e.g.
+  1993-02-14T13:10:30 and 19930214T131030.
+  Thanks for the hint from Sascha Wojewsky.
+
   Revision 1.2  2004/01/25 18:15:04  iwache
   New functions FloatToRpcStr and RpcStrToFloat
   for language independent transmission of real values
@@ -38,8 +44,7 @@
 }
 unit XmlRpcCommon;
 
-{$DEFINE INDY9}
-{$DEFINE ACTIVEX}
+{$INCLUDE 'indy.inc'}
 
 interface
 

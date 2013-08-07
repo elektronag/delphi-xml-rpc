@@ -64,7 +64,7 @@ begin
   if not Assigned(FRpcServer) then
   begin
     FRpcServer := TRpcServer.Create;
-    FRpcServer.ListenPort := 8080;
+    FRpcServer.ListenPort := 8081;
     FRpcServer.EnableIntrospect := True;
     RpcMethodHandler := TRpcMethodHandler.Create;
     try
