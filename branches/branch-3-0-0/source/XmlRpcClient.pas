@@ -96,8 +96,14 @@ type
     FOnWork: TWorkEvent;
     FOnWorkBegin: TWorkBeginEvent;
     FOnWorkEnd: TWorkEndEvent;
+    {$IFDEF VER180}  // Delphi 2006
     procedure DoWork(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Integer);
     procedure DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode; AWorkCountMax: Integer);
+    {$ENDIF}
+    {$IFDEF VER230}  // Delphi XE2
+    procedure DoWork(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Int64);
+    procedure DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode; AWorkCountMax: Int64);
+    {$ENDIF}
     procedure DoWorkEnd(ASender: TObject; AWorkMode: TWorkMode);
     // DrN 2010.12.27 End
     function Post(const RawData: string): string;
@@ -182,6 +188,7 @@ end ;
 {------------------------------------------------------------------------------}
 
 procedure TRpcClientParser.Parse(Data: string);
+var Response: AnsiString;
 begin
   FRpcResult := TRpcResult.Create;
 
@@ -205,12 +212,13 @@ begin
     FParser := TXMLParser.Create;
   if not Assigned(FStack) then
     FStack := TObjectStack.Create;
-  //CLINTON - 16/9/2003  
-  if not Assigned(FStructNames) then  
+  //CLINTON - 16/9/2003
+  if not Assigned(FStructNames) then
     FStructNames := TStringList.Create;
 
+  Response := AnsiString(Data); // DrN: convert to AnsiString
   FRpcResult.Clear;
-  FParser.LoadFromBuffer(PChar(Data));
+  FParser.LoadFromBuffer(PAnsiChar(Response)); // DrN: PChar -> PAnsiChar
   FParser.StartScan;
   FParser.Normalize := False;
   while FParser.Scan do
@@ -263,7 +271,6 @@ begin
         Parse(Strings.Text);
       end;
     end
-    else
     begin
       { ok we got here so we where expired or did not exist
         make the call and cache the result this time }
@@ -325,16 +332,27 @@ begin
 end;
 
 { DrN 2010.12.27 Begin}
-
+{$IFDEF VER180}  // Delphi 2006
 procedure TRpcCaller.DoWork(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCount: Integer);
+{$ENDIF}
+{$IFDEF VER230}  // Delphi XE2
+procedure TRpcCaller.DoWork(ASender: TObject; AWorkMode: TWorkMode;
+  AWorkCount: Int64);
+{$ENDIF}
 begin
   if Assigned(OnWork) then
     OnWork(Self, AWorkMode, AWorkCount);
 end;
 
+{$IFDEF VER180}  // Delphi 2006
 procedure TRpcCaller.DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
   AWorkCountMax: Integer);
+{$ENDIF}
+{$IFDEF VER230}  // Delphi XE2
+procedure TRpcCaller.DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
+  AWorkCountMax: Int64);
+{$ENDIF}
 begin
   if Assigned(OnWorkBegin) then
     OnWorkBegin(Self, AWorkMode, AWorkCountMax);
@@ -369,7 +387,8 @@ begin
   try
     SendStream := TMemoryStream.Create;
     ResponseStream := TMemoryStream.Create;
-    StringToStream(RawData, SendStream); { convert to a stream }
+    { convert string to a stream } // 2013.08.08 DrN: All Delphi versions compatible
+    SendStream.WriteBuffer(Pointer(RawData)^, Length(RawData) * SizeOf(Char));
     SendStream.Position := 0;
     Session := TIdHttp.Create(nil);
     // DrN 2010.12.27 Begin

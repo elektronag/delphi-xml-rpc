@@ -39,8 +39,7 @@ object Form1: TForm1
     Width = 65
     Height = 21
     TabOrder = 2
-    Text = '8'#160'080'
-    OnChange = ebPortChange
+    Text = '8'#160'081'
   end
   object udPort: TUpDown
     Left = 185
@@ -49,7 +48,7 @@ object Form1: TForm1
     Height = 21
     Associate = ebPort
     Max = 32767
-    Position = 8080
+    Position = 8081
     TabOrder = 3
   end
 end
