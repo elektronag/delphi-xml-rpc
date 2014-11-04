@@ -4,8 +4,8 @@
 { XML-RPC Library for Delphi, Kylix and DWPL (DXmlRpc)  }
 { XmlRpcCommon.pas                                      }
 {                                                       }
-{ for Delphi 6, 7                                       }
-{ Release 2.0.0                                         }
+{ for Delphi 6, 7, XE                                }
+{ Release 3.0.0                                         }
 { Copyright (c) 2001-2003 by Team-DelphiXml-Rpc         }
 { e-mail: team-dxmlrpc@dwp42.org                        }
 { www: http://sourceforge.net/projects/delphixml-rpc/   }
@@ -20,33 +20,12 @@
 { license.txt.                                          }
 {                                                       }
 {*******************************************************}
-{
-  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcCommon.pas,v 1.3 2004/04/20 20:35:19 iwache Exp $
-  ----------------------------------------------------------------------------
 
-  $Log: XmlRpcCommon.pas,v $
-  Revision 1.3  2004/04/20 20:35:19  iwache
-  Function IsoToDateTime now handles both valid
-  ISO 8601 - Date/Time Representations e.g.
-  1993-02-14T13:10:30 and 19930214T131030.
-  Thanks for the hint from Sascha Wojewsky.
-
-  Revision 1.2  2004/01/25 18:15:04  iwache
-  New functions FloatToRpcStr and RpcStrToFloat
-  for language independent transmission of real values
-  added. (Problem was: Decimal seperator in German Windows
-  is different to the English one.)
-
-  Revision 1.1.1.1  2003/12/03 22:37:48  iwache
-  Initial import of release 2.0.0
-
-  ----------------------------------------------------------------------------
-}
 unit XmlRpcCommon;
 
-{$INCLUDE 'indy.inc'}
-
 interface
+
+{$INCLUDE 'indy.inc'}
 
 uses
 {$IFDEF WIN32}
@@ -54,6 +33,9 @@ uses
 {$ENDIF}
   SysUtils,
   Classes
+{$IFDEF INDY10}
+  ,IdHashMessageDigest
+{$ENDIF}
 {$IFDEF INDY9}
   , IdHash
 {$ENDIF}
@@ -126,16 +108,18 @@ function FixEmptyString(const Value: string): string;
 function URLEncode(const Value: string): string;
 
 function StreamToString(Stream: TStream): string;
-
+function StreamToAnsiString(Stream: TStream): AnsiString;
 procedure StringToStream(const Text: string; Stream: TStream);
 
 {$IFDEF ACTIVEX}
 function StreamToVariant(Stream: TStream): OleVariant;
-
 procedure VariantToStream(V: OleVariant; Stream: TStream);
 {$ENDIF}
 
-{$IFDEF INDY9}
+
+{$IFDEF INDY10}
+function HashStringMD5AsHex(const AStr: WideString): string;
+{$ELSE}
 function Hash128AsHex(const Hash128Value: T4x4LongWordRecord): string;
 {$ENDIF}
 
@@ -241,7 +225,19 @@ function StreamToString(Stream: TStream): string;
 begin
   Result := '';
   Stream.Seek(0, soFromBeginning);
-  SetLength(Result, Stream.Size);
+  SetLength(Result, Stream.Size div SizeOf(Result[1]));  // FIX: SizeOf() added
+  Stream.Read(Result[1], Stream.Size);
+end;
+
+{------------------------------------------------------------------------------}
+{ convert stream to an Ansi string                                             }
+{------------------------------------------------------------------------------}
+
+function StreamToAnsiString(Stream: TStream): AnsiString;
+begin
+  Result := '';
+  Stream.Seek(0, soFromBeginning);
+  SetLength(Result, Stream.Size div SizeOf(Result[1]));  // FIX: SizeOf() added
   Stream.Read(Result[1], Stream.Size);
 end;
 
@@ -251,7 +247,7 @@ end;
 
 procedure StringToStream(const Text: string; Stream: TStream);
 begin
-  Stream.Write(Text[1], Length(Text));
+  Stream.Write(Text[1], Length(Text) * SizeOf(Text[1]));
 end;
 
 {------------------------------------------------------------------------------}
@@ -305,7 +301,7 @@ end;
 
 function FloatToRpcStr(Value: Double): string;
 begin
-  Result := SubstDecSep(FloatToStr(Value), DecimalSeparator,
+  Result := SubstDecSep(FloatToStr(Value), {$IFDEF UNICODE}FormatSettings.{$ENDIF}DecimalSeparator,
       RpcDecimalSeparator);
 end;
 
@@ -316,7 +312,7 @@ end;
 function RpcStrToFloat(Value: string): Double;
 begin
   Result := StrToFloat(SubstDecSep(Value, RpcDecimalSeparator,
-      DecimalSeparator));
+            {$IFDEF UNICODE}FormatSettings.{$ENDIF}DecimalSeparator));
 end;
 
 {------------------------------------------------------------------------------}
@@ -550,8 +546,6 @@ begin
 end;
 
 {------------------------------------------------------------------------------}
-{$IFDEF INDY9}
-
 function Hash128AsHex(const Hash128Value: T4x4LongWordRecord): string;
 begin
   Result := IntToHex(Hash128Value[0], 4) +
@@ -560,7 +554,18 @@ begin
     IntToHex(Hash128Value[3], 4);
 end;
 
+{$IFDEF INDY10}
+function HashStringMD5AsHex(const AStr: WideString): string;
+begin
+  with TIdHashMessageDigest5.Create do
+  try
+    Result := LowerCase(HashStringAsHex(string(AStr)));
+  finally
+    Free;
+  end;
+end;
 {$ENDIF}
+
 {------------------------------------------------------------------------------}
 
 function FixEmptyString(const Value: string): string;

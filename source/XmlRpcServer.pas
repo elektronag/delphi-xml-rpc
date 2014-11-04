@@ -4,8 +4,8 @@
 { XML-RPC Library for Delphi, Kylix and DWPL (DXmlRpc)  }
 { XmlRpcServer.pas                                      }
 {                                                       }
-{ for Delphi 6, 7                                       }
-{ Release 2.0.0                                         }
+{ for Delphi 6, 7, XE                                       }
+{ Release 3.0.0                                         }
 { Copyright (c) 2001-2003 by Team-DelphiXml-Rpc         }
 { e-mail: team-dxmlrpc@dwp42.org                        }
 { www: http://sourceforge.net/projects/delphixml-rpc/   }
@@ -20,25 +20,7 @@
 { license.txt.                                          }
 {                                                       }
 {*******************************************************}
-{
-  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcServer.pas,v 1.2 2004/04/20 20:34:43 iwache Exp $
-  ----------------------------------------------------------------------------
 
-  $Log: XmlRpcServer.pas,v $
-  Revision 1.2  2004/04/20 20:34:43  iwache
-  Bug in procedure TRpcServerParser.DataTag fixed,
-  FLastTag = 'INT4' must be FLastTag = 'I4'.
-  Thanks to s.xmlrpc at --ringo.co.za--
-
-  Bug in procedure TRpcServerParser.Parse fixed,
-  CDATA sections for strings added.
-  Thanks to Henrik Genssen - hinnack
-
-  Revision 1.1.1.1  2003/12/03 22:37:41  iwache
-  Initial import of release 2.0.0
-
-  ----------------------------------------------------------------------------
-}
 unit XmlRpcServer;
 
 interface
@@ -47,7 +29,6 @@ interface
 
 uses
   SysUtils, Classes, Contnrs, SyncObjs,
-  // #iwa-2003-11-09: IdCustomHTTPServer added for D7 support
   IdCustomHTTPServer,
   IdHTTPServer,
   IdTCPServer,
@@ -112,17 +93,17 @@ type
     FActive: Boolean;
     FLock: TCriticalSection;
     FIntrospect: Boolean;
-  public // DrN 2010
+  public
     {introspection extension methods }
     procedure SystemListMethods(Thread: TRpcThread; const MethodName: string; List: TList; Return: TRpcReturn);
     procedure SystemMethodHelp(Thread: TRpcThread; const MethodName: string; List: TList; Return: TRpcReturn);
     procedure SystemMethodSignature(Thread: TRpcThread; const MethodName: string; List: TList; Return: TRpcReturn);
     { end introspection extension methods }
-  private // DrN 2010
+  private
     procedure DataPosted(Thread: TRpcThread; RequestInfo: TIdHTTPRequestInfo;
       ResponseInfo: TIdHTTPResponseInfo);
   protected
-    procedure DataPostedUnknownMethod(AContext: TIdContext;
+    procedure DataPostedUnknownMethod(AContext: TRpcThread;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); virtual;
   private
     procedure SetActive(const Value: boolean);
@@ -164,9 +145,9 @@ end;
 
 procedure TRpcServerParser.DataTag;
 var
-  Data: string;
+  Data: String;
 begin
-  Data := FParser.CurContent;
+  Data := String(FParser.CurContent);
 
   { empty not allowed }
   if Trim(Data) = '' then
@@ -307,8 +288,8 @@ end;
 procedure TRpcServerParser.Parse(const Data: string);
 var Request: AnsiString;
 begin
-  Request := AnsiString(Data); // DrN: convert to AnsiString
-  FParser.LoadFromBuffer(PAnsiChar(Request)); //DrN: PChar -> PAnsiChar
+  Request := AnsiString(Data); // convert to AnsiString
+  FParser.LoadFromBuffer(PAnsiChar(Request)); // PChar -> PAnsiChar
   FParser.StartScan;
   FParser.Normalize := False;
   while FParser.Scan do
@@ -361,8 +342,6 @@ begin
   inherited Create;
   FServer := TIdHTTPServer.Create(nil);
   FSParser := TRpcServerParser.Create;
-  // 14.8.2003 / mko
-  // FMethodList := TList.Create; Take TObjectList instead of TList;
   FMethodList := TObjectList.Create;
   FMethodList.OwnsObjects := True;
   FLock := TCriticalSection.Create;
@@ -370,10 +349,11 @@ end;
 
 {------------------------------------------------------------------------------}
 
-procedure TRpcServer.DataPostedUnknownMethod(AContext: TIdContext;
+procedure TRpcServer.DataPostedUnknownMethod(AContext: TRpcThread;
   ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
   RpcReturn: TRpcReturn;
+  ResponseTxt: AnsiString;
 begin
   RpcReturn := TRpcReturn.Create;
   try
@@ -381,13 +361,14 @@ begin
       'Requested method was not registered on the server');
     AResponseInfo.ContentType    := 'text/xml';
     AResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-    {$IFDEF UNICODE}  // 2013.08.08 DrN
+    ResponseTxt := AnsiString(RpcReturn.ResponseXML);
+    {$IFDEF UNICODE}
     AResponseInfo.ContentStream := TMemoryStream.Create;
     AResponseInfo.ContentStream.WriteBuffer(
-      Pointer(RpcReturn.ResponseXML)^, Length(RpcReturn.ResponseXML) * SizeOf(Char));
+      Pointer(ResponseTxt)^, Length(ResponseTxt) * SizeOf(AnsiChar));
     AResponseInfo.ContentStream.Position := 0;
     {$ELSE}
-    AResponseInfo.ContentText := RpcReturn.ResponseXML;
+    AResponseInfo.ContentText := ResponseTxt;
     {$ENDIF}
   finally
     RpcReturn.Free;
@@ -403,6 +384,7 @@ var
   List:      TList;
   RequestName: string;
   Parser: TRpcServerParser;
+  ResponseTxt: AnsiString;
 begin
   Found := False;
   RpcReturn := TRpcReturn.Create;
@@ -439,11 +421,11 @@ begin
           needs to be implemented to allow per-thread parser allocation.
         }
         Parser := GetParser;
-        {$IFDEF UNICODE}
-        Parser.Parse(StreamToString(RequestInfo.PostStream));
-        {$ELSE}
-        Parser.Parse(RequestInfo.UnparsedParams);
-        {$ENDIF}
+        // FIX: sometimes it's RequestInfo.PostStream, sometimes not
+        if (RequestInfo.PostStream <> nil) and (RequestInfo.PostStream.Size > 0) then
+           Parser.Parse( String(StreamToAnsiString( RequestInfo.PostStream)) )
+        else
+           Parser.Parse( RequestInfo.UnparsedParams );
         { PMM alteration }
         List := Parser.GetParameters;
         RequestName := Parser.RequestName;
@@ -466,28 +448,30 @@ begin
       begin
         ResponseInfo.ContentType    := 'text/xml';
         ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-        {$IFDEF UNICODE}  // 2013.08.08 DrN
+        ResponseTxt                 := AnsiString(RpcReturn.ResponseXML);
+        {$IFDEF UNICODE}
         ResponseInfo.ContentStream := TMemoryStream.Create;
         ResponseInfo.ContentStream.WriteBuffer(
-          Pointer(RpcReturn.ResponseXML)^, Length(RpcReturn.ResponseXML) * SizeOf(Char));
+          Pointer(ResponseTxt)^, Length(ResponseTxt) * SizeOf(AnsiChar));
         ResponseInfo.ContentStream.Position := 0;
         {$ELSE}
-        ResponseInfo.ContentText    := RpcReturn.ResponseXML;
+        ResponseInfo.ContentText    := ResponseTxt;
         {$ENDIF}
       end;
     except
       on E: Exception do
       begin
         RpcReturn.SetError(999, E.Message);
-        ResponseInfo.ContentType := 'text/xml';
+        ResponseInfo.ContentType    := 'text/xml';
         ResponseInfo.ServerSoftware := 'DELPHI XMLRPC SERVER';
-        {$IFDEF UNICODE}  // 2013.08.08 DrN
+        ResponseTxt                 := AnsiString(RpcReturn.ResponseXML);
+        {$IFDEF UNICODE}
         ResponseInfo.ContentStream := TMemoryStream.Create;
         ResponseInfo.ContentStream.WriteBuffer(
-          Pointer(RpcReturn.ResponseXML)^, Length(RpcReturn.ResponseXML) * SizeOf(Char));
+          Pointer(ResponseTxt)^, Length(ResponseTxt) * SizeOf(AnsiChar));
         ResponseInfo.ContentStream.Position := 0;
         {$ELSE}
-        ResponseInfo.ContentText    := RpcReturn.ResponseXML;
+        ResponseInfo.ContentText    := ResponseTxt;
         {$ENDIF}
       end;
     end;
@@ -544,7 +528,7 @@ var
 begin
   FServer.DefaultPort := FPort;
   FServer.OnCommandGet := DataPosted;
-  FServer.SessionTimeOut := 10000;
+  FServer.SessionTimeOut := 30000;
   {introspection extension}
   if FIntrospect then
   begin

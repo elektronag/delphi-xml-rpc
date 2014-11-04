@@ -1,15 +1,38 @@
+
+{*******************************************************}
+{                                                       }
+{ XML-RPC Library for Delphi, Kylix and DWPL (DXmlRpc)  }
+{ XmlRpcWebServer.pas                                   }
+{                                                       }
+{ for Delphi 6, 7, XE                                      }
+{ Release 3.0.0                                         }
+{ Copyright (c) 2001-2003 by Team-DelphiXml-Rpc         }
+{ e-mail: team-dxmlrpc@dwp42.org                        }
+{ www: http://sourceforge.net/projects/delphixml-rpc/   }
+{                                                       }
+{ The initial developer of the code is                  }
+{   Alessio Pollero, alessio.pollero@yandex.com         }
+{                                                       }
+{ This file may be distributed and/or modified under    }
+{ the terms of the GNU Lesser General Public License    }
+{ (LGPL) version 2.1 as published by the Free Software  }
+{ Foundation and appearing in the included file         }
+{ license.txt.                                          }
+{                                                       }
+{*******************************************************}
+
 unit XmlRpcWebServer;
 
 {$INCLUDE 'indy.inc'}
 
 interface
 uses
-  Classes,//TStringList, TStrings
+  Classes,
   IdCustomHTTPServer,
   {$IFDEF INDY10}
   IdContext,
   {$ENDIF}
-  XmlRpcServer;//TRpcServer
+  XmlRpcServer;
   
 type
   TOnWebCommand = procedure(ASender: TObject; ACommand: string;
@@ -41,13 +64,8 @@ type
 
 implementation
 uses
-SysUtils;//;, Classes, Contnrs, SyncObjs;
-{
-  IdHTTPServer,
-  IdTCPServer,
-  XmlRpcCommon,
-  LibXmlParser;
-}  
+SysUtils;
+
 { TRpcWebServer }
 
 procedure TRpcWebServer.SetRootFolder(AValue : String);

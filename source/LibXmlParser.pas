@@ -211,6 +211,12 @@ Date        Author Version Changes
 2009-12-31  HeySt  1.0.19  Finished work at the attribute value normalization.
                            Delphi 2009/2010 compatibility
                            (no UnicodeString compatibility though, sorry)
+2010-10-12  HeySt  1.0.20  Checked Delphi XE compatibility
+                           Included a $DEFINE for FreePascal compatibility
+                           CurContent is not reset to an empty string with every start tag.
+                           I will keep this behaviour so old code doesn't get broken.
+                           In case you need this you can set CurContent yourself at every
+                           start tag.
 *)
 
 
@@ -238,6 +244,8 @@ Date        Author Version Changes
        // Managed Code
        (*$IFDEF MANAGEDCODE *)This code will not compile as Managed Code            (*$ENDIF *)
        (*$IFDEF CLR *)        This code will not compile as Managed Code            (*$ENDIF *)
+       (*$IFDEF FPC *) (*$MODE delphi *) (*$ENDIF *)   // It's FreePascal
+
 
 (*$R-  Switch Range Checking Off              *)
 (*$B-  Switch Complete Boolean Evaluation Off *)
@@ -254,7 +262,7 @@ USES
   Math;
 
 CONST
-  CVersion      = '1.0.19';          // This variable will be updated for every release
+  CVersion      = '1.0.20';          // This variable will be updated for every release
                                      // (I hope, I won't forget to do it everytime ...)
   CUnknownChar  = '¿';               // Replacement for unknown/untransformable character references
 
@@ -525,7 +533,7 @@ PROCEDURE SetStringSF (VAR S : AnsiString; BufferStart, BufferFinal : PAnsiChar)
 FUNCTION  StrSFPas    (Start, Finish : PAnsiChar) : AnsiString;                    // Convert buffer part to Pascal string
 FUNCTION  TrimWs      (Source : AnsiString) : AnsiString;                          // Trim Whitespace
 
-FUNCTION  AnsiToUtf8  (Source : ANSISTRING) : AnsiString;                                         // Convert Windows-1252 to UTF-8
+FUNCTION  AnsiToUtf8  (Source : AnsiString) : AnsiString;                                         // Convert Windows-1252 to UTF-8
 FUNCTION  Utf8ToAnsi  (Source : AnsiString; UnknownChar : ANSICHAR = CUnknownChar) : ANSISTRING;  // Convert UTF-8 to Windows-1252
 
 
@@ -753,7 +761,6 @@ CONST
                                Decimal  195      164
                                ANSI     Ã        ¤         *)
 
-
 FUNCTION  AnsiToUtf8 (Source : ANSISTRING) : AnsiString;
           (* Converts the given Windows ANSI (Windows-1252) String to UTF-8. *)
 VAR
@@ -847,7 +854,6 @@ BEGIN
     END;
   SetLength (Result, Len);
 END;
-
 
 (*
 ===============================================================================================
@@ -2394,7 +2400,7 @@ FUNCTION  TXmlParser.TranslateEncoding  (CONST Source : AnsiString) : AnsiString
           // source encodings or create other target encodings.
 BEGIN
   IF CurEncoding = 'UTF-8'
-    THEN Result := LibXmlParser.Utf8ToAnsi (Source)
+    THEN Result := Utf8ToAnsi (Source)
     ELSE Result := Source;
 END;
 
