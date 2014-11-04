@@ -4,8 +4,8 @@
 { XML-RPC Library for Delphi, Kylix and DWPL (DXmlRpc)  }
 { XmlRpcTypes.pas                                       }
 {                                                       }
-{ for Delphi 6, 7                                       }
-{ Release 2.0.0                                         }
+{ for Delphi 6, 7, XE                                      }
+{ Release 3.0.0                                         }
 { Copyright (c) 2001-2003 by Team-DelphiXml-Rpc         }
 { e-mail: team-dxmlrpc@dwp42.org                        }
 { www: http://sourceforge.net/projects/delphixml-rpc/   }
@@ -20,45 +20,7 @@
 { license.txt.                                          }
 {                                                       }
 {*******************************************************}
-{
-  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcTypes.pas,v 1.3 2004/04/20 20:33:48 iwache Exp $
-  ----------------------------------------------------------------------------
 
-  $Log: XmlRpcTypes.pas,v $
-  Revision 1.3  2004/04/20 20:33:48  iwache
-  New procedures StrLoadFromStream, StrSaveToStream,
-  StrLoadFromFile and StrSaveToFile to IRpcCustomItem
-  and TRpcCustomItem added. Thanks to
-  Henrik Genssen - hinnack
-
-  Bug with double MimeEncodeString fixed in
-  TRpcCustomArray.AddItemBase64Str.
-  Thanks to Nicolas Seyer - nolics
-
-  Bug of additional #13#10 appended lines  fixed in
-  TRpcFunction.GetRequestXML, TRpcFunction.GetResponseXML,
-  TRpcFunction.GetErrorXML and TRpcFunction.GetBodyXML.
-  Thanks to Nicolas again
-
-  Revision 1.2  2004/01/25 18:24:41  iwache
-  New methods GetAsVariant and SetAsVariant and
-  new property AsVariant added to TRpcCustomItem.
-
-  Method TRpcCustomItem.GetAsString extended to
-  convert different data types (Integer, Float, Base64,
-  DateTime and Boolean) into strings.
-
-  Methods TRpcArray.GetAsXML, LoadRawData and
-  TRpcStruct.GetAsXML, LoadRawData and
-  TRpcFunction.GetBodyXML now use FloatToRpcStr
-  resp. RpcStrToFloat for float convertion into
-  XML string and vice versa.
-
-  Revision 1.1.1.1  2003/12/03 22:37:46  iwache
-  Initial import of release 2.0.0
-
-  ----------------------------------------------------------------------------
-}
 unit XmlRpcTypes;
 
 interface
@@ -458,10 +420,10 @@ begin
       Result := DateTimeToStr(AsDateTime);
     dtBoolean:
       Result := BoolToStr(AsBoolean, True);
-//    dtStruct:
-//      Result := '<STRUCT>';
-//    dtArray:
-//      Result := '<ARRAY>';
+   dtStruct:
+      Result := '<STRUCT>';
+    dtArray:
+      Result := '<ARRAY>';
   else
     raise EXmlRpcError.Create('Item type can not be converted into a string')
   end;
@@ -563,10 +525,10 @@ begin
       Result := AsDateTime;
     dtBoolean:
       Result := AsBoolean;
-//    dtStruct:
-//      Result := '<STRUCT>';
-//    dtArray:
-//      Result := '<ARRAY>';
+    dtStruct:
+      Result := '<STRUCT>';
+    dtArray:
+      Result := '<ARRAY>';
   else
     raise EXmlRpcError.Create('Item type can not be converted into a variant')
   end;

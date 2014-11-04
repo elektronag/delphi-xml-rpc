@@ -4,8 +4,8 @@
 { XML-RPC Library for Delphi, Kylix and DWPL (DXmlRpc)  }
 { XmlRpcClient.pas                                      }
 {                                                       }
-{ for Delphi 6, 7                                       }
-{ Release 2.0.0                                         }
+{ for Delphi 6, 7, XE                                       }
+{ Release 3.0.0                                         }
 { Copyright (c) 2001-2003 by Team-DelphiXml-Rpc         }
 { e-mail: team-dxmlrpc@dwp42.org                        }
 { www: http://sourceforge.net/projects/delphixml-rpc/   }
@@ -20,23 +20,7 @@
 { license.txt.                                          }
 {                                                       }
 {*******************************************************}
-{
-  $Header: /cvsroot/delphixml-rpc/dxmlrpc/source/XmlRpcClient.pas,v 1.2 2004/04/20 20:35:51 iwache Exp $
-  ----------------------------------------------------------------------------
 
-  $Log: XmlRpcClient.pas,v $
-  Revision 1.2  2004/04/20 20:35:51  iwache
-  - New properties UserName, Password and BasicAuth
-  added to TRpcCaller.
-  - Bug in procedure TRpcClientParser.Parse fixed,
-  CDATA sections for strings added.
-  Thanks for both to Henrik Genssen - hinnack
-
-  Revision 1.1.1.1  2003/12/03 22:37:51  iwache
-  Initial import of release 2.0.0
-
-  ----------------------------------------------------------------------------
-}
 unit XmlRpcClient;
 
 interface
@@ -47,8 +31,8 @@ uses
   SysUtils, Classes, Contnrs, XmlRpcTypes, XmlRpcCommon,
   IdHTTP,
   IdSSLOpenSSL,
-{$IFDEF INDY9}
   IdHashMessageDigest,
+{$IFDEF INDY9}
   IdHash,
 {$ENDIF}
   IdComponent,
@@ -92,20 +76,12 @@ type
     FSSLKeyFile: string;
     FEndPoint: string;
     FProxyBasicAuth: Boolean;
-    // DrN 2010.12.27 Begin
     FOnWork: TWorkEvent;
     FOnWorkBegin: TWorkBeginEvent;
     FOnWorkEnd: TWorkEndEvent;
-    {$IFDEF VER180}  // Delphi 2006
-    procedure DoWork(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Integer);
-    procedure DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode; AWorkCountMax: Integer);
-    {$ENDIF}
-    {$IFDEF VER230}  // Delphi XE2
-    procedure DoWork(ASender: TObject; AWorkMode: TWorkMode; AWorkCount: Int64);
-    procedure DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode; AWorkCountMax: Int64);
-    {$ENDIF}
+    procedure DoWork(ASender: TObject; AWorkMode: TWorkMode; {$IFDEF INDY10} AWorkCount: Int64 {$ELSE} const AWorkCount: Integer{$ENDIF});
+    procedure DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode; {$IFDEF INDY10}AWorkCountMax: Int64 {$ELSE}const AWorkCountMax: Integer{$ENDIF});
     procedure DoWorkEnd(ASender: TObject; AWorkMode: TWorkMode);
-    // DrN 2010.12.27 End
     function Post(const RawData: string): string;
   public
     constructor Create;
@@ -124,14 +100,10 @@ type
     property SSLRootCertFile: string read FSSLRootCertFile write FSSLRootCertFile;
     property SSLCertFile: string read FSSLCertFile write FSSLCertFile;
     property SSLKeyFile: string read FSSLKeyFile write FSSLKeyFile;
-    // DrN 2010.12.27 Begin
     property OnWork: TWorkEvent read FOnWork write FOnWork;
     property OnWorkBegin: TWorkBeginEvent read FOnWorkBegin write FOnWorkBegin;
     property OnWorkEnd: TWorkEndEvent read FOnWorkEnd write FOnWorkEnd;
-    // DrN 2010.12.27 End
-{$IFDEF INDY9}
     function Execute(RpcFunction: IRpcFunction; Ttl: Integer): IRpcResult; overload;
-{$ENDIF}
     function Execute(const XmlRequest: string): IRpcResult; overload;
     function Execute(Value: IRpcFunction): IRpcResult; overload;
     procedure DeleteOldCache(Ttl: Integer);
@@ -216,9 +188,9 @@ begin
   if not Assigned(FStructNames) then
     FStructNames := TStringList.Create;
 
-  Response := AnsiString(Data); // DrN: convert to AnsiString
+  Response := AnsiString(Data); // convert to AnsiString
   FRpcResult.Clear;
-  FParser.LoadFromBuffer(PAnsiChar(Response)); // DrN: PChar -> PAnsiChar
+  FParser.LoadFromBuffer(PAnsiChar(Response)); // PChar -> PAnsiChar
   FParser.StartScan;
   FParser.Normalize := False;
   while FParser.Scan do
@@ -240,8 +212,6 @@ end;
 { CACHED WEB CALL Time To Live calculated in minutes                           }
 {------------------------------------------------------------------------------}
 
-{$IFDEF INDY9}
-
 function TRpcCaller.Execute(RpcFunction: IRpcFunction; Ttl: Integer):
     IRpcResult;
 var
@@ -255,7 +225,11 @@ begin
   HashMessageDigest := TIdHashMessageDigest5.Create;
   try
     { determine the md5 digest hash of the request }
+    {$IFDEF INDY10}
+    Hash := HashStringMD5AsHex(XmlRequest);
+    {$ELSE}
     Hash := Hash128AsHex(HashMessageDigest.HashValue(XmlRequest));
+    {$ENDIF}
   finally
     HashMessageDigest.Free;
   end;
@@ -270,7 +244,7 @@ begin
         Strings.LoadFromFile(GetTempDir + Hash + '.csh');
         Parse(Strings.Text);
       end;
-    end
+    end else
     begin
       { ok we got here so we where expired or did not exist
         make the call and cache the result this time }
@@ -286,8 +260,6 @@ begin
   end;
   RpcFunction.Clear;
 end;
-
-{$ENDIF}
 
 {------------------------------------------------------------------------------}
 { NON - CACHED WEB CALL with IFunction parameter                                                     }
@@ -331,28 +303,15 @@ begin
   end;
 end;
 
-{ DrN 2010.12.27 Begin}
-{$IFDEF VER180}  // Delphi 2006
-procedure TRpcCaller.DoWork(ASender: TObject; AWorkMode: TWorkMode;
-  AWorkCount: Integer);
-{$ENDIF}
-{$IFDEF VER230}  // Delphi XE2
-procedure TRpcCaller.DoWork(ASender: TObject; AWorkMode: TWorkMode;
-  AWorkCount: Int64);
-{$ENDIF}
+
+procedure TRpcCaller.DoWork(ASender: TObject; AWorkMode: TWorkMode; {$IFDEF INDY10} AWorkCount: Int64 {$ELSE} const AWorkCount: Integer{$ENDIF});
 begin
   if Assigned(OnWork) then
     OnWork(Self, AWorkMode, AWorkCount);
 end;
 
-{$IFDEF VER180}  // Delphi 2006
-procedure TRpcCaller.DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
-  AWorkCountMax: Integer);
-{$ENDIF}
-{$IFDEF VER230}  // Delphi XE2
-procedure TRpcCaller.DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode;
-  AWorkCountMax: Int64);
-{$ENDIF}
+
+procedure TRpcCaller.DoWorkBegin(ASender: TObject; AWorkMode: TWorkMode; {$IFDEF INDY10}AWorkCountMax: Int64 {$ELSE}const AWorkCountMax: Integer{$ENDIF});
 begin
   if Assigned(OnWorkBegin) then
     OnWorkBegin(Self, AWorkMode, AWorkCountMax);
@@ -363,7 +322,6 @@ begin
   if Assigned(OnWorkEnd) then
     OnWorkEnd(Self, AWorkMode);
 end;
-{ DrN 2010.12.27 End}
 
 {------------------------------------------------------------------------------}
 { POST THE REQUEST TO THE RPC SERVER                                           }
@@ -380,22 +338,21 @@ var
 {$IFDEF INDY10}
   IdSSLIOHandlerSocket : TIdSSLIOHandlerSocketOpenSSL;
 {$ENDIF}
+ Data : AnsiString;
 begin
+  Data := AnsiString(RawData);
   SendStream := nil;
   ResponseStream := nil;
   IdSSLIOHandlerSocket := nil;
   try
     SendStream := TMemoryStream.Create;
     ResponseStream := TMemoryStream.Create;
-    { convert string to a stream } // 2013.08.08 DrN: All Delphi versions compatible
-    SendStream.WriteBuffer(Pointer(RawData)^, Length(RawData) * SizeOf(Char));
+    SendStream.WriteBuffer(Pointer(Data)^, Length(Data) * SizeOf(AnsiChar));
     SendStream.Position := 0;
     Session := TIdHttp.Create(nil);
-    // DrN 2010.12.27 Begin
     Session.OnWork := DoWork;
     Session.OnWorkBegin := DoWorkBegin;
     Session.OnWorkEnd := DoWorkEnd;
-    // DrN 2010.12.27 End
     try
       IdSSLIOHandlerSocket := nil;
       if (FSSLEnable) then
@@ -436,7 +393,7 @@ begin
       Session.Request.Accept := '*/*';
       Session.Request.ContentType := 'text/xml';
       Session.Request.Connection := 'Keep-Alive';
-      Session.Request.ContentLength := Length(RawData);
+      Session.Request.ContentLength := Length(Data);
       if not FSSLEnable then
         if FHostPort = 80 then
           Session.Post('http://' + FHostName + FEndPoint, SendStream,
@@ -449,7 +406,7 @@ begin
         Session.Post('https://' + FHostName + ':' + IntToStr(FHostPort) +
           FEndPoint, SendStream, ResponseStream);
 
-      Result := StreamToString(ResponseStream);
+      Result := String(StreamToAnsiString(ResponseStream));
     finally
       Session.Free;
     end;
@@ -476,7 +433,7 @@ procedure TRpcClientParser.DataTag;
 var
   Data: string;
 begin
-  Data := FParser.CurContent;
+  Data := String(FParser.CurContent);
   { should never be empty }
   if not (Trim(Data) <> '') then
     Exit;
