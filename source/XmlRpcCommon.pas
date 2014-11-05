@@ -4,7 +4,7 @@
 { XML-RPC Library for Delphi, Kylix and DWPL (DXmlRpc)  }
 { XmlRpcCommon.pas                                      }
 {                                                       }
-{ for Delphi 6, 7, XE                                }
+{ for Delphi 6, 7, XE                                   }
 { Release 3.0.0                                         }
 { Copyright (c) 2001-2003 by Team-DelphiXml-Rpc         }
 { e-mail: team-dxmlrpc@dwp42.org                        }
@@ -546,13 +546,6 @@ begin
 end;
 
 {------------------------------------------------------------------------------}
-function Hash128AsHex(const Hash128Value: T4x4LongWordRecord): string;
-begin
-  Result := IntToHex(Hash128Value[0], 4) +
-    IntToHex(Hash128Value[1], 4) +
-    IntToHex(Hash128Value[2], 4) +
-    IntToHex(Hash128Value[3], 4);
-end;
 
 {$IFDEF INDY10}
 function HashStringMD5AsHex(const AStr: WideString): string;
@@ -563,6 +556,14 @@ begin
   finally
     Free;
   end;
+end;
+{$ELSE}
+function Hash128AsHex(const Hash128Value: T4x4LongWordRecord): string;
+begin
+  Result := IntToHex(Hash128Value[0], 4) +
+    IntToHex(Hash128Value[1], 4) +
+    IntToHex(Hash128Value[2], 4) +
+    IntToHex(Hash128Value[3], 4);
 end;
 {$ENDIF}
 
