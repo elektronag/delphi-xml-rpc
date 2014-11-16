@@ -4,7 +4,7 @@
 { XML-RPC Library for Delphi, Kylix and DWPL (DXmlRpc)  }
 { XmlRpcCommon.pas                                      }
 {                                                       }
-{ for Delphi 6, 7, XE                                   }
+{ for Delphi 6, 7, XE and Lazarus                       }
 { Release 3.0.0                                         }
 { Copyright (c) 2001-2003 by Team-DelphiXml-Rpc         }
 { e-mail: team-dxmlrpc@dwp42.org                        }
@@ -115,7 +115,6 @@ procedure StringToStream(const Text: string; Stream: TStream);
 function StreamToVariant(Stream: TStream): OleVariant;
 procedure VariantToStream(V: OleVariant; Stream: TStream);
 {$ENDIF}
-
 
 {$IFDEF INDY10}
 function HashStringMD5AsHex(const AStr: WideString): string;
@@ -589,6 +588,12 @@ begin
       '<value>[NULL]</value>', [rfReplaceAll, rfIgnoreCase]);
   Result := StringReplace(Result,'<value> </value>',
       '<value>[NULL]</value>', [rfReplaceAll, rfIgnoreCase]);
+  Result := StringReplace(Result,'<value/>',
+      '<value>[NULL]</value>', [rfReplaceAll, rfIgnoreCase]);
+  Result := StringReplace(Result,'<data/>',
+      '<data>[NULL]</data>', [rfReplaceAll, rfIgnoreCase]);
+  Result := StringReplace(Result,'<struct/>',
+      '<struct>[NULL]</struct>', [rfReplaceAll, rfIgnoreCase]);
 end;
 
 {$IFDEF ACTIVEX}
