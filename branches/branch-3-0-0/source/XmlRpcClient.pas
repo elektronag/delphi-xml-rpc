@@ -147,7 +147,7 @@ begin
 end ;
 
 function TRpcClientParser.PopStructName: string ;
-var 
+var
   I: Integer ;
 begin
   I := FStructNames.Count - 1;
@@ -433,7 +433,12 @@ procedure TRpcClientParser.DataTag;
 var
   Data: string;
 begin
-  Data := String(FParser.CurContent);
+  Data := FParser.CurContent;
+
+  { avoid to skip empty string values inside a struct }
+  if ((FLastTag = 'STRING') and (FStructNames.Count > 0) and (not (Trim(Data) <> ''))) then
+    Data := '[NULL]';
+
   { should never be empty }
   if not (Trim(Data) <> '') then
     Exit;
@@ -469,18 +474,18 @@ begin
     if (TObject(FStack.Peek) is TRpcStruct) then
     begin
       if (FLastTag = 'STRING') then
-        TRpcStruct(FStack.Peek).LoadRawData(dtString, PopStructName, Data);
-      if (FLastTag = 'INT') then
-        TRpcStruct(FStack.Peek).LoadRawData(dtInteger, PopStructName, Data);
-      if (FLastTag = 'I4') then
-        TRpcStruct(FStack.Peek).LoadRawData(dtInteger, PopStructName, Data);
-      if (FLastTag = 'DOUBLE') then
-        TRpcStruct(FStack.Peek).LoadRawData(dtFloat, PopStructName, Data);
-      if (FLastTag = 'DATETIME.ISO8601') then
-        TRpcStruct(FStack.Peek).LoadRawData(dtDateTime, PopStructName, Data);
-      if (FLastTag = 'BASE64') then
-        TRpcStruct(FStack.Peek).LoadRawData(dtBase64, PopStructName, Data);
-      if (FLastTag = 'BOOLEAN') then
+        TRpcStruct(FStack.Peek).LoadRawData(dtString, PopStructName, Data)
+      else if (FLastTag = 'INT') then
+        TRpcStruct(FStack.Peek).LoadRawData(dtInteger, PopStructName, Data)
+      else if (FLastTag = 'I4') then
+        TRpcStruct(FStack.Peek).LoadRawData(dtInteger, PopStructName, Data)
+      else if (FLastTag = 'DOUBLE') then
+        TRpcStruct(FStack.Peek).LoadRawData(dtFloat, PopStructName, Data)
+      else if (FLastTag = 'DATETIME.ISO8601') then
+        TRpcStruct(FStack.Peek).LoadRawData(dtDateTime, PopStructName, Data)
+      else if (FLastTag = 'BASE64') then
+        TRpcStruct(FStack.Peek).LoadRawData(dtBase64, PopStructName, Data)
+      else if (FLastTag = 'BOOLEAN') then
         TRpcStruct(FStack.Peek).LoadRawData(dtBoolean, PopStructName, Data);
     end;
 
@@ -488,18 +493,18 @@ begin
     if (TObject(FStack.Peek) is TRpcArray) then
     begin
       if (FLastTag = 'STRING') then
-        TRpcArray(FStack.Peek).LoadRawData(dtString, Data);
-      if (FLastTag = 'INT') then
-        TRpcArray(FStack.Peek).LoadRawData(dtInteger, Data);
-      if (FLastTag = 'I4') then
-        TRpcArray(FStack.Peek).LoadRawData(dtInteger, Data);
-      if (FLastTag = 'DOUBLE') then
-        TRpcArray(FStack.Peek).LoadRawData(dtFloat, Data);
-      if (FLastTag = 'DATETIME.ISO8601') then
-        TRpcArray(FStack.Peek).LoadRawData(dtDateTime, Data);
-      if (FLastTag = 'BASE64') then
-        TRpcArray(FStack.Peek).LoadRawData(dtBase64, Data);
-      if (FLastTag = 'BOOLEAN') then
+        TRpcArray(FStack.Peek).LoadRawData(dtString, Data)
+      else if (FLastTag = 'INT') then
+        TRpcArray(FStack.Peek).LoadRawData(dtInteger, Data)
+      else if (FLastTag = 'I4') then
+        TRpcArray(FStack.Peek).LoadRawData(dtInteger, Data)
+      else if (FLastTag = 'DOUBLE') then
+        TRpcArray(FStack.Peek).LoadRawData(dtFloat, Data)
+      else if (FLastTag = 'DATETIME.ISO8601') then
+        TRpcArray(FStack.Peek).LoadRawData(dtDateTime, Data)
+      else if (FLastTag = 'BASE64') then
+        TRpcArray(FStack.Peek).LoadRawData(dtBase64, Data)
+      else if (FLastTag = 'BOOLEAN') then
         TRpcArray(FStack.Peek).LoadRawData(dtBoolean, Data);
     end;
 
@@ -507,18 +512,18 @@ begin
   if FStack.Count = 0 then
   begin
     if (FLastTag = 'STRING') then
-      FRpcResult.AsRawString := Data;
-    if (FLastTag = 'INT') then
-      FRpcResult.AsInteger := StrToInt(Data);
-    if (FLastTag = 'I4') then
-      FRpcResult.AsInteger := StrToInt(Data);
-    if (FLastTag = 'DOUBLE') then
-      FRpcResult.AsFloat := StrToFloat(Data);
-    if (FLastTag = 'DATETIME.ISO8601') then
-      FRpcResult.AsDateTime := IsoToDateTime(Data);
-    if (FLastTag = 'BASE64') then
-      FRpcResult.AsBase64Raw := Data;
-    if (FLastTag = 'BOOLEAN') then
+      FRpcResult.AsRawString := Data
+    else if (FLastTag = 'INT') then
+      FRpcResult.AsInteger := StrToInt(Data)
+    else if (FLastTag = 'I4') then
+      FRpcResult.AsInteger := StrToInt(Data)
+    else if (FLastTag = 'DOUBLE') then
+      FRpcResult.AsFloat := StrToFloat(Data)
+    else if (FLastTag = 'DATETIME.ISO8601') then
+      FRpcResult.AsDateTime := IsoToDateTime(Data)
+    else if (FLastTag = 'BASE64') then
+      FRpcResult.AsBase64Raw := Data
+    else if (FLastTag = 'BOOLEAN') then
       FRpcResult.AsBoolean := StrToBool(Data);
   end;
 
@@ -548,8 +553,8 @@ begin
         if (FStack.Count > 0) then
         begin
           if (TObject(FStack.Peek) is TRpcArray) then
-            TRpcArray(FStack.Peek).AddItem(RpcStruct);
-          if (TObject(FStack.Peek) is TRpcStruct) then
+            TRpcArray(FStack.Peek).AddItem(RpcStruct)
+          else if (TObject(FStack.Peek) is TRpcStruct) then
             TRpcStruct(FStack.Peek).AddItem(PopStructName, RpcStruct)
         end
         else
@@ -565,8 +570,8 @@ begin
         if (FStack.Count > 0) then
         begin
           if (TObject(FStack.Peek) is TRpcArray) then
-            TRpcArray(FStack.Peek).AddItem(RpcArray);
-          if (TObject(FStack.Peek) is TRpcStruct) then
+            TRpcArray(FStack.Peek).AddItem(RpcArray)
+          else if (TObject(FStack.Peek) is TRpcStruct) then
             TRpcStruct(FStack.Peek).AddItem(PopStructName, RpcArray);
         end
         else
@@ -584,8 +589,8 @@ begin
         if (FStack.Count > 0) then
         begin
           if (TObject(FStack.Peek) is TRpcStruct) then
-            TRpcStruct(FStack.Peek).AddItem(PopStructName, RpcArray);
-          if (TObject(FStack.Peek) is TRpcArray) then
+            TRpcStruct(FStack.Peek).AddItem(PopStructName, RpcArray)
+          else if (TObject(FStack.Peek) is TRpcArray) then
             TRpcArray(FStack.Peek).AddItem(RpcArray);
         end
         else
@@ -600,8 +605,8 @@ begin
     if (FStack.Count > 0) then
     begin
       if (TObject(FStack.Peek) is TRpcStruct) then
-        FRpcResult.AsStruct := TRpcStruct(FStack.Pop);
-      if (TObject(FStack.Peek) is TRpcArray) then
+        FRpcResult.AsStruct := TRpcStruct(FStack.Pop)
+      else if (TObject(FStack.Peek) is TRpcArray) then
         FRpcResult.AsArray := TRpcArray(FStack.Pop);
 
       //CLINTON 16/9/2003
@@ -646,4 +651,3 @@ begin
 end;
 
 end.
-
