@@ -1219,7 +1219,7 @@ var
 begin
   Strings := TStringList.Create;
   try
-    Strings.Add('<?xml version="1.0" encoding="windows-1251" ?>');
+    Strings.Add('<?xml version="1.0" ?>');
     Strings.Add('<methodCall>');
     Strings.Add('   <methodName>' + FObjectMethod + '</methodName>');
     GetBodyXML(Strings);
@@ -1243,7 +1243,7 @@ begin
 
   Strings := TStringList.Create;
   try
-    Strings.Add('<?xml version="1.0" encoding="windows-1251" ?>');
+    Strings.Add('<?xml version="1.0" ?>');
     Strings.Add('<methodResponse>');
     GetBodyXML(Strings);
     Strings.Add('</methodResponse>');
@@ -1259,7 +1259,7 @@ var
 begin
   Strings := TStringList.Create;
   try
-    Strings.Add('<?xml version="1.0" encoding="windows-1251" ?>');
+    Strings.Add('<?xml version="1.0" ?>');
     Strings.Add('<methodResponse>');
     Strings.Add('   <fault>');
     Strings.Add('      <value>');
