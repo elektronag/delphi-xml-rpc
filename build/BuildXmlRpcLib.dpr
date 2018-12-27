@@ -5,6 +5,8 @@ program BuildXmlRpcLib;
 uses
   SysUtils,
   DIMime in '..\source\DIMime.pas',
+  DIMimeStreams in '..\source\DIMimeStreams.pas',
+  DISystemCompat in '..\source\DISystemCompat.pas',
   LibXmlParser in '..\source\LibXmlParser.pas',
   XmlRpcClient in '..\source\XmlRpcClient.pas',
   XmlRpcTypes in '..\source\XmlRpcTypes.pas',
