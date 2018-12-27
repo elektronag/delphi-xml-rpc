@@ -365,6 +365,7 @@ type
     property RequestXML: string read GetRequestXML;
     property ResponseXML: string read GetResponseXML;
     property ErrorXML: string read GetErrorXML;
+    property ErrorCode: Integer read FErrorCode;
   end;
 
   EXmlRpcError = class(Exception)

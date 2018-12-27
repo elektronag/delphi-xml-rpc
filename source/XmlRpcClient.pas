@@ -43,12 +43,13 @@ type
   private
     FStack: TObjectStack;
     FStructNames: TStringList;
-    FRpcResult: IRpcResult;
     FParser: TXMLParser;
     FLastTag: string;
     FFixEmptyStrings: Boolean;
     procedure PushStructName(const Name: string);
     function PopStructName: string ;
+  protected
+    FRpcResult: IRpcResult;
   public
     constructor Create;
     destructor Destroy; override;
