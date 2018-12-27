@@ -47,7 +47,7 @@ type
   protected
     procedure SetRootFolder(AValue: string);
     function GetRootFolder: string;
-    procedure DataPostedUnknownMethod(AContext: TIdContext;
+    procedure DataPostedUnknownMethod(AContext: TRpcThread;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo); override;
     function ExecuteWebCommand(ACommand : String; AParams : TStrings) : Boolean;      
   public
@@ -78,7 +78,7 @@ begin
   Result := FRootFolder;
 end;
 
-procedure TRpcWebServer.DataPostedUnknownMethod(AContext: TIdContext;
+procedure TRpcWebServer.DataPostedUnknownMethod(AContext: TRpcThread;
       ARequestInfo: TIdHTTPRequestInfo; AResponseInfo: TIdHTTPResponseInfo);
 var
   Document : String;
